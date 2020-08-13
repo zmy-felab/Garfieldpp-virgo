@@ -18,31 +18,53 @@
 
 using namespace Garfield;
 using namespace std;
-
+namespace
+{
+	void PrintUsage()
+	{
+		cerr << " Usage: " << endl;
+		cerr << " ./CeramicGEM [-n nEvents] [-v Voltage] [-p Pressure] [-t Temperature]" << endl;
+	}
+} // namespace
 int main(int argc, char *argv[])
 {
-	if(argc != 5)
+	if (argc > 9 )
 	{
-		printf("Please input electron number, GEM voltage, gas pressure or temperature.\n");
+		PrintUsage();
 		return 1;
+	}
+
+	// Default parameters 
+	int nEvents = 10, voltage = 800;
+	double pressure = 760., temperature = 293.15;	
+
+	for (int i = 1; i < argc; i = i + 2)
+	{
+		if (string(argv[i]) == "-n")
+			nEvents = atoi(argv[i + 1]);
+		else if (string(argv[i]) == "-v") 
+			voltage = atoi(argv[i + 1]);
+		else if (string(argv[i]) == "-p")
+			pressure = atof(argv[i + 1]);
+		else if (string(argv[i]) == "-t")
+			temperature = atof(argv[i + 1]);
+		else
+		{
+			PrintUsage();
+			return 1;
+		}
 	}
 
 	// Start time
 	time_t t;
 	time(&t);
 	struct tm *lt = localtime(&t);
-	
-	char st[255];
-	sprintf(st, "Start time: %d/%02d/%02d %02d:%02d:%02d", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
+
+	char timeRecond[255];
+	sprintf(timeRecond, "Start   time: %d/%02d/%02d %02d:%02d:%02d", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
 	TApplication app("app", &argc, argv);
 	plottingEngine.SetDefaultStyle();
-
-    // 	
-	int nEvents = atoi(argv[1]);
-	string voltage = argv[2];
-	double pressure = atof(argv[3]);
-	double temperature = atof(argv[4]);
 
 	const bool plotDrift = false;
 	const bool plotField = false;
@@ -59,7 +81,7 @@ int main(int argc, char *argv[])
 	// const double rim = 80.e-4;
 
 	// Load the field map.
-	string ansysPath = "./ansys/"+voltage+"V/";
+	string ansysPath = "./ansys/" + to_string(voltage) + "V/";
 	ComponentAnsys123 *thgem = new ComponentAnsys123();
 	thgem->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
 	thgem->EnableMirrorPeriodicityX();
@@ -74,15 +96,16 @@ int main(int argc, char *argv[])
 	gas->EnableDebugging();
 	gas->Initialise();
 	gas->DisableDebugging();
+	// gas->PrintGas();
 	// Set the Penning transfer efficiency.
 	const double rPenning = 0.57;
 	const double lambdaPenning = 0.;
 	gas->EnablePenningTransfer(rPenning, lambdaPenning, "ar");
 	// Load the ion mobilities.
-	if(driftIon)
+	if (driftIon)
 	{
 		const string path = getenv("GARFIELD_HOME");
-		gas->LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");		
+		gas->LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");
 	}
 
 	// Associate the gas with the corresponding field map material.
@@ -112,10 +135,11 @@ int main(int argc, char *argv[])
 	if (plotDrift)
 	{
 		driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2.,
-						    3 * pitch,  3 * pitch,  drift + metal + ceramic / 2.);
+						   3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
 		aval->EnablePlotting(driftView);
 
-		if(driftIon) aval_mc->EnablePlotting(driftView);
+		if (driftIon)
+			aval_mc->EnablePlotting(driftView);
 	}
 
 	int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0;
@@ -125,8 +149,8 @@ int main(int argc, char *argv[])
 	double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
 	int status;
 
-    char rootname[255];
-    sprintf(rootname, "./result/EleInformation_%dEle_%sV_%.1lfTorr_%.2lfK.root", nEvents, voltage.c_str(), pressure, temperature);
+	char rootname[255];
+	sprintf(rootname, "./result/EleInformation_%dEle_%dV_%.1lfTorr_%.2lfK.root", nEvents, voltage, pressure, temperature);
 	TFile *ff = new TFile(rootname, "RECREATE");
 	TTree *tt_ele = new TTree("ele", "Electrons information");
 	tt_ele->Branch("xe1", &xe1, "xe1/D");
@@ -159,34 +183,34 @@ int main(int argc, char *argv[])
 		aval->GetAvalancheSize(ne, ni);
 		np = aval->GetNumberOfElectronEndpoints();
 
-
 		for (int j = 0; j < np; j++)
 		{
 			aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, e1,
-										 xe2, ye2, ze2, te2, e2, status);
+									  xe2, ye2, ze2, te2, e2, status);
 			tt_ele->Fill();
 
-			if(ze2 <= -induct - metal - ceramic / 2.) npp++;
+			if (ze2 <= -induct - metal - ceramic / 2.)
+				npp++;
 
-			if(driftIon)
+			if (driftIon)
 			{
 				aval_mc->DriftIon(xe1, ye1, ze1, te1);
 				aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1,
-				                           xi2, yi2, zi2, ti2, status);
+										xi2, yi2, zi2, ti2, status);
 			}
 		}
 		tt_gain->Fill();
-		
+
 		ntotal += np;
-		
-		printf("%d/%d: %10.1lfum %10.1lfum %10d %10d %10d %10d\n", i, nEvents, x0*10000, y0*10000, ne, ni, np, npp);
-		
+
+		printf("%d/%d: %10.1lfum %10.1lfum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, ne, ni, np, npp);
+
 		npp = 0;
 	}
 	ff->Write();
 	ff->Close();
 
-	printf("Average Gain: %d / %d = %d\n", ntotal, nEvents, ntotal/nEvents);
+	printf("Average Gain: %d / %d = %.2lf\n", ntotal, nEvents, (double)ntotal / nEvents);
 
 	if (plotDrift)
 	{
@@ -206,19 +230,19 @@ int main(int argc, char *argv[])
 		// fieldView->SetElectricFieldRange(0., 10000.);
 		TCanvas *cf = new TCanvas();
 		fieldView->SetCanvas(cf);
-		fieldView->PlotContour();  // e v p
+		fieldView->PlotContour(); // e v p
 		// fieldView->PlotSurface("e"); // e v p
 		// fieldView->Plot("v", "CONT1"); // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
 		// fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
 	}
-	if(plotMesh)
+	if (plotMesh)
 	{
 		ViewFEMesh *meshView = new ViewFEMesh();
 		meshView->SetComponent(thgem);
 		meshView->SetPlane(0, -1, 0, 0, 0, 0);
 		meshView->SetViewDrift(driftView);
-		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2.,  -3 * pitch,
-						   3 * pitch,  drift + metal + ceramic / 2.,  3 * pitch);
+		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch,
+						   3 * pitch,  drift + metal + ceramic / 2., 3 * pitch);
 		meshView->SetFillMesh(false);
 		meshView->EnableAxes();
 		meshView->SetYaxisTitle("z");
@@ -228,10 +252,11 @@ int main(int argc, char *argv[])
 	}
 
 	// Print start and end time
-	printf("%s\n", st);
+	printf("%s\n", timeRecond);
 	time(&t);
 	lt = localtime(&t);
-	printf("End   time: %d/%02d/%02d %02d:%02d:%02d\n", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
+	printf("End     time: %d/%02d/%02d %02d:%02d:%02d\n", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-	if(plotDrift || plotField || plotMesh) app.Run(kTRUE);
+	if (plotDrift || plotField || plotMesh)
+		app.Run(kTRUE);
 }
