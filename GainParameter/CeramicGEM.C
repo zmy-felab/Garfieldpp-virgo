@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
 	const bool plotField = false;
 	const bool plotMesh = false;
 	const bool driftIon = false;
+	// const bool calculateSignal = false;
 
 	// Information of detector [cm]
 	const double pitch = 0.06;
@@ -121,8 +122,7 @@ int main(int argc, char *argv[])
 	// Create the sensor.
 	Sensor *sensor = new Sensor();
 	sensor->AddComponent(thgem);
-	sensor->SetArea(-42 * pitch, -42 * pitch, -induct - metal - ceramic / 2.,
-					 42 * pitch,  42 * pitch,  drift + metal + ceramic / 2.);
+	sensor->SetArea(-42 * pitch, -42 * pitch, -induct - metal - ceramic / 2., 42 * pitch,  42 * pitch,  drift + metal + ceramic / 2.);
 
 	AvalancheMicroscopic *aval = new AvalancheMicroscopic();
 	aval->SetSensor(sensor);
@@ -134,8 +134,7 @@ int main(int argc, char *argv[])
 	ViewDrift *driftView = new ViewDrift();
 	if (plotDrift)
 	{
-		driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2.,
-						   3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
+		driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2., 3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
 		aval->EnablePlotting(driftView);
 
 		if (driftIon)
@@ -185,8 +184,7 @@ int main(int argc, char *argv[])
 
 		for (int j = 0; j < np; j++)
 		{
-			aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, e1,
-									  xe2, ye2, ze2, te2, e2, status);
+			aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, e1, xe2, ye2, ze2, te2, e2, status);
 			tt_ele->Fill();
 
 			if (ze2 <= -induct - metal - ceramic / 2.)
@@ -195,8 +193,7 @@ int main(int argc, char *argv[])
 			if (driftIon)
 			{
 				aval_mc->DriftIon(xe1, ye1, ze1, te1);
-				aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1,
-										xi2, yi2, zi2, ti2, status);
+				aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, status);
 			}
 		}
 		tt_gain->Fill();
@@ -241,8 +238,7 @@ int main(int argc, char *argv[])
 		meshView->SetComponent(thgem);
 		meshView->SetPlane(0, -1, 0, 0, 0, 0);
 		meshView->SetViewDrift(driftView);
-		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch,
-						   3 * pitch,  drift + metal + ceramic / 2., 3 * pitch);
+		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch,  drift + metal + ceramic / 2., 3 * pitch);
 		meshView->SetFillMesh(false);
 		meshView->EnableAxes();
 		meshView->SetYaxisTitle("z");
