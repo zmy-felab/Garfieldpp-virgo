@@ -19,5 +19,5 @@ do
     # temperature=`echo "$temperature+2."|bc`
     echo $i $nEvents $voltage $pressure $temperature
 
-    ./CeramicGEM -n $nEvents -v $voltage -p pressure -t $temperature > "./runlog/${nEvents}_${voltage}_${pressure}_${temperature}.log" 
+    ./CeramicGEM -n $nEvents -v $voltage -p pressure -t $temperature > "./runlog/${nEvents}_${voltage}_${pressure}_${temperature}.log" &
 done
