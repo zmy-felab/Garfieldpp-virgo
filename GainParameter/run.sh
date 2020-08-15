@@ -12,7 +12,7 @@ voltage=700
 pressure=760.0
 temperature=293.15
 
-for i in `seq 0 1`
+for i in `seq 0 5`
 do
     # let voltage=voltage+20
     pressure=`echo "$pressure-1."|bc`
