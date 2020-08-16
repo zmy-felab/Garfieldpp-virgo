@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
 
 		ntotal += np;
 
-		printf("%d/%d: %10.1lfum %10.1lfum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, ne, ni, np, npp);
+		printf("%d/%d: %10.1lfum %10.1lfum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, ni, ne, np, npp);
 
 		npp = 0;
 	}
