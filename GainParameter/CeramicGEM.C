@@ -23,37 +23,77 @@ namespace
 	void PrintUsage()
 	{
 		cerr << " Usage: " << endl;
-		cerr << " ./CeramicGEM [-n nEvents] [-v Voltage] [-p Pressure] [-t Temperature]" << endl;
+		cerr << " ./CeramicGEM [-n nEvents] [-p Pressure] [-t Temperature] [-v Voltage] [-d Drift] [-i Induction] [-r Rim]" << endl;
 	}
 } // namespace
 int main(int argc, char *argv[])
 {
-	if (argc > 9 )
+	if (argc > 9)
 	{
 		PrintUsage();
 		return 1;
 	}
 
-	// Default parameters 
-	int nEvents = 10, voltage = 800;
-	double pressure = 760., temperature = 293.15;	
+	// Default parameters
+	int nEvents = 10;			 // num
+	double pressure = 760.;		 // Torr
+	double temperature = 293.15; // k
+	int voltage = 900;			 // Voltage
+	double driftE = 1.;			 // kV/cm
+	double inductionE = 3.;		 // kV/cm
+	int rim = 80;				 // um
+
+	string ansysPath = "./ansys/" + to_string(voltage) + "V/";
+;
+	string rootname = "./result/EleInformation";
 
 	for (int i = 1; i < argc; i = i + 2)
 	{
 		if (string(argv[i]) == "-n")
+		{
 			nEvents = atoi(argv[i + 1]);
-		else if (string(argv[i]) == "-v") 
-			voltage = atoi(argv[i + 1]);
+			rootname += "_" + to_string(nEvents) + "Ele";
+		}
 		else if (string(argv[i]) == "-p")
+		{
 			pressure = atof(argv[i + 1]);
+			rootname += "_" + to_string(pressure) + "Torr";
+		}
 		else if (string(argv[i]) == "-t")
+		{
 			temperature = atof(argv[i + 1]);
+			rootname += "_" + to_string(temperature) + "K";
+		}
+		else if (string(argv[i]) == "-v")
+		{
+			voltage = atoi(argv[i + 1]);
+			rootname += "_" + to_string(voltage) + "V";
+		}
+		else if (string(argv[i]) == "-d")
+		{
+			driftE = atof(argv[i + 1]);
+			rootname += "_" + to_string(driftE) + "kV_D";
+			ansysPath = "./ansys/" + to_string(driftE) + "kV/";
+		}
+		else if (string(argv[i]) == "-i")
+		{
+			inductionE = atof(argv[i + 1]);
+			rootname += "_" + to_string(inductionE) + "kV_I";
+			ansysPath = "./ansys/" + to_string(inductionE) + "kV/";
+		}
+		else if (string(argv[i]) == "-r")
+		{
+			rim = atoi(argv[i + 1]);
+			rootname += "_" + to_string(rim) + "Rim";
+			ansysPath = "./ansys/" + to_string(rim) + "um/";
+		}
 		else
 		{
 			PrintUsage();
 			return 1;
 		}
 	}
+	rootname += ".root";
 
 	// Start time
 	time_t t;
@@ -77,12 +117,10 @@ int main(int argc, char *argv[])
 	// const double dia = 0.02;
 	const double ceramic = 168.e-4;
 	const double metal = 18.e-4;
-	const double drift = 0.4;
+	const double drift = 0.2;
 	const double induct = 0.2;
-	// const double rim = 80.e-4;
 
 	// Load the field map.
-	string ansysPath = "./ansys/" + to_string(voltage) + "V/";
 	ComponentAnsys123 *thgem = new ComponentAnsys123();
 	thgem->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
 	thgem->EnableMirrorPeriodicityX();
@@ -122,7 +160,7 @@ int main(int argc, char *argv[])
 	// Create the sensor.
 	Sensor *sensor = new Sensor();
 	sensor->AddComponent(thgem);
-	sensor->SetArea(-42 * pitch, -42 * pitch, -induct - metal - ceramic / 2., 42 * pitch,  42 * pitch,  drift + metal + ceramic / 2.);
+	sensor->SetArea(-42 * pitch, -42 * pitch, -induct - metal - ceramic / 2., 42 * pitch, 42 * pitch, drift + metal + ceramic / 2.);
 
 	AvalancheMicroscopic *aval = new AvalancheMicroscopic();
 	aval->SetSensor(sensor);
@@ -148,9 +186,7 @@ int main(int argc, char *argv[])
 	double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
 	int status;
 
-	char rootname[255];
-	sprintf(rootname, "./result/EleInformation_%dEle_%dV_%.1lfTorr_%.2lfK.root", nEvents, voltage, pressure, temperature);
-	TFile *ff = new TFile(rootname, "RECREATE");
+	TFile *ff = new TFile(rootname.c_str(), "RECREATE");
 	TTree *tt_ele = new TTree("ele", "Electrons information");
 	tt_ele->Branch("xe1", &xe1, "xe1/D");
 	tt_ele->Branch("ye1", &ye1, "ye1/D");
@@ -170,11 +206,11 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < nEvents; i++)
 	{
 		// Randomize the initial position.
-		// double x0 = -pitch / 2. + RndmUniform() * pitch;
-		// double y0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
-		double x0 = 0.;
-		double y0 = 0.;
-		double z0 = 0.41;
+		double x0 = -pitch / 2. + RndmUniform() * pitch;
+		double y0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
+		// double x0 = 0.;
+		// double y0 = 0.;
+		double z0 = 0.21;
 		double t0 = 0.;
 		double e0 = 0.1;
 
@@ -228,9 +264,9 @@ int main(int argc, char *argv[])
 		TCanvas *cf = new TCanvas();
 		fieldView->SetCanvas(cf);
 		fieldView->PlotContour(); // e v p
-		// fieldView->PlotSurface("e"); // e v p
-		// fieldView->Plot("v", "CONT1"); // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
-		// fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
+								  // fieldView->PlotSurface("e"); // e v p
+								  // fieldView->Plot("v", "CONT1"); // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
+								  // fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
 	}
 	if (plotMesh)
 	{
@@ -238,7 +274,7 @@ int main(int argc, char *argv[])
 		meshView->SetComponent(thgem);
 		meshView->SetPlane(0, -1, 0, 0, 0, 0);
 		meshView->SetViewDrift(driftView);
-		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch,  drift + metal + ceramic / 2., 3 * pitch);
+		meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch, drift + metal + ceramic / 2., 3 * pitch);
 		meshView->SetFillMesh(false);
 		meshView->EnableAxes();
 		meshView->SetYaxisTitle("z");
