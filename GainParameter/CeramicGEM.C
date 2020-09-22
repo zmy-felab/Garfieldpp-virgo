@@ -28,7 +28,7 @@ namespace
 } // namespace
 int main(int argc, char *argv[])
 {
-    if (argc > 9)
+    if (argc > 15)
     {
         PrintUsage();
         return 1;
