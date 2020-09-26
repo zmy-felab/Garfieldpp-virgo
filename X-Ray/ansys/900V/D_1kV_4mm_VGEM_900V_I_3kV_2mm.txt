@@ -5,19 +5,19 @@ FINISH
 /FILNAM, THGEM, 1
 /TITLE, SingleTHGEM
 
-/PREP7  
+/PREP7
 ! No polynomial elements
 /PMETH,OFF,1
 
 ! Set electric preferences
 KEYW,PR_ELMAG,1
-KEYW,MAGELC,1   
+KEYW,MAGELC,1
 
 ! Select element
 ET,1,SOLID123
 
 ! Material properties
-MP,PERX,1,1e10 	 ! Metal
+MP,PERX,1,1e10 	     ! Metal
 MP,RSVX,1,0      	 !
 MP,PERX,2,1       	 ! Gas
 MP,PERX,3,3.48  	 ! Ceramic
@@ -25,49 +25,50 @@ MP,PERX,3,3.48  	 ! Ceramic
 
 ! PUT GEOMETRY AND FIELDS
 pitch = 0.6   	 	! Distance between holes, in mm
-ceramic = 0.168 	 	! Thickness of the ceramic layer, in mm
+ceramic = 0.168 	! Thickness of the ceramic layer, in mm
 metal = 0.018 	 	! Thickness of the meta layers, in mm
-dia = 0.2   	 	! Hole diameter, in mm  
+dia = 0.2   	 	! Hole diameter, in mm
 drift = 4    	 	! Thickness of the drift region
 induct = 2  	 	! Thickness of the induction gap
 rim = 0.08    	 	! rim thickness in top metal layer (i.e. greater radius - smaller radius)
-              		 	! N.B. when rim=0, usually metal is a bit thicker (e.g. 0.017 instead of 0.015)
-ground = 0           	        	! unit = V
+                    ! N.B. when rim=0, usually metal is a bit thicker (e.g. 0.017 instead of 0.015)
+
+ground = 0           	        ! unit = V
 lowerVoltage = -600.         	! unit = V
 upperVoltage = -1500.       	! unit = V
-cathodeVoltage = -1900.    	! unit = V
+cathodeVoltage = -1900.    	    ! unit = V
 
 ! Construct the THGEM
-BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -ceramic/2, ceramic/2		! Ceramic #1
+BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -ceramic/2, ceramic/2		    ! Ceramic #1
 BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -ceramic/2, -ceramic/2-metal	! Lowwer metal  #2
-BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, ceramic/2, ceramic/2+metal	! Upper metal #3
+BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, ceramic/2, ceramic/2+metal	    ! Upper metal #3
 
-CYLIND, dia/2, , -ceramic/2, ceramic/2, 0., 360.    		! Central  hole in ceramic #4
+CYLIND, dia/2, , -ceramic/2, ceramic/2, 0., 360.    		    ! Central  hole in ceramic #4
 CYLIND, dia/2+rim, , -ceramic/2-metal, -ceramic/2, 0., 360. 	! Central hole in lower metal layer #5
-CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 0., 360. 	! Central hole with rim in upper metal layer #6
- 
-WPOFFS, -pitch/2, -sqrt(3)*pitch/2, 0			! Move to the origin of the working plane to left lowwer hole
-CYLIND, dia/2, , -ceramic/2, ceramic/2, 0., 90. 		! a quarter of hole in ceramic #7
-CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal, 0., 90. 	! a quarter of hole with rim in lower metal layer #8
-CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 0., 90. 	! a quarter of hole with rim in upper metal layer #9
+CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 0., 360. 	    ! Central hole with rim in upper metal layer #6
 
-WPOFFS, pitch, 0, 0					! Move to the origin of the working plane to right lowwer hole
-CYLIND, dia/2, , -ceramic/2, ceramic/2, 90.,180. 		! a quarter of hole in ceramic #10
-CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal, 90.,180.	! a quarter of hole with rim in lower metal layer #11
-CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 90.,180. 	! a quarter of hole with rim in upper metal layer #12
+WPOFFS, -pitch/2, -sqrt(3)*pitch/2, 0			                ! Move to the origin of the working plane to left lowwer hole
+CYLIND, dia/2, , -ceramic/2, ceramic/2, 0., 90. 		        ! a quarter of hole in ceramic #7
+CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal, 0., 90. 	    ! a quarter of hole with rim in lower metal layer #8
+CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 0., 90. 	    ! a quarter of hole with rim in upper metal layer #9
 
-WPOFFS, 0, sqrt(3)*pitch, 0          			! Move to the origin of the working plane to right upper hole
-CYLIND, dia/2, , -ceramic/2, ceramic/2, 180., 270. 		! a equarter of hole in ceramic #13
+WPOFFS, pitch, 0, 0					                            ! Move to the origin of the working plane to right lowwer hole
+CYLIND, dia/2, , -ceramic/2, ceramic/2, 90.,180. 		        ! a quarter of hole in ceramic #10
+CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal, 90.,180.	    ! a quarter of hole with rim in lower metal layer #11
+CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 90.,180. 	    ! a quarter of hole with rim in upper metal layer #12
+
+WPOFFS, 0, sqrt(3)*pitch, 0          			                ! Move to the origin of the working plane to right upper hole
+CYLIND, dia/2, , -ceramic/2, ceramic/2, 180., 270. 		        ! a equarter of hole in ceramic #13
 CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal ,180., 270. 	! a quarter of hole with rim in lower metal layer #14
-CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal,180., 270. 	! a quarter of hole with rim in upper metal layer #15
+CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal,180., 270. 	    ! a quarter of hole with rim in upper metal layer #15
 
-WPOFFS, -pitch, 0, 0                 			! Move to the origin of the working plane to left upper hole
-CYLIND, dia/2, , -ceramic/2, ceramic/2, 270., 360. 		! a quarter of hole in ceramic #16
+WPOFFS, -pitch, 0, 0                 			                ! Move to the origin of the working plane to left upper hole
+CYLIND, dia/2, , -ceramic/2, ceramic/2, 270., 360. 		        ! a quarter of hole in ceramic #16
 CYLIND, dia/2+rim, , -ceramic/2, -ceramic/2-metal, 270., 360. 	! a quarter of hole with rim in lower metal layer #17
 CYLIND, dia/2+rim, , ceramic/2, ceramic/2+metal, 270., 360. 	! a quarter of hole with rim in upper metal layer #18
 
 ! Subtract from the ceramic
-VSBV, 1, 4, , DELETE, DELETE    				! 1 - 4  --> 19
+VSBV, 1, 4, , DELETE, DELETE    			! 1 - 4  --> 19
 VSBV, 19, 7, , DELETE, DELETE   			! 19 - 7 --> 1
 VSBV, 1, 10, , DELETE, DELETE  				! 1 - 10 --> 4
 VSBV, 4, 13, ,DELETE, DELETE				! 4 - 13 --> 1
@@ -87,36 +88,36 @@ VSBV, 3, 12, , DELETE, DELETE  				! 3 - 12 --> 2
 VSBV, 2, 15, , DELETE, DELETE   			! 2 - 15 --> 3
 VSBV, 3, 18, , DELETE, DELETE   			! 3 - 18 --> 2 Get the upper metal
 
-WPOFFS, pitch/2, -sqrt(3)*pitch/2, 0                 		! Move to the origin of the working plane to center
+WPOFFS, pitch/2, -sqrt(3)*pitch/2, 0        ! Move to the origin of the working plane to center
 
-BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, ceramic/2+metal+drift, ceramic/2+metal+drift+metal	! Drift electrode #3
+BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, ceramic/2+metal+drift, ceramic/2+metal+drift+metal	    ! Drift electrode #3
 BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -ceramic/2-metal-induct, -ceramic/2-metal-induct-metal	! Induct electrode #5
-BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -induct-ceramic/2-metal, drift+ceramic/2+metal	! Gas #6
+BLOCK, -pitch/2, pitch/2, -sqrt(3)*pitch/2, sqrt(3)*pitch/2, -induct-ceramic/2-metal, drift+ceramic/2+metal	        ! Gas #6
 
 ! Subtract the ceramic and metal from the gas
 VSBV, 6, 1, , , KEEP   ! 6 - 1 --> 7
 VSBV, 7, 2, , , KEEP   ! 7 - 2 --> 6
 VSBV, 6, 4, , , KEEP   ! 6 - 4 --> 7 Get the gas
 
-! Which leaves us with 1: lower metal, 2: upper metal, 3: drift electrode, 4: ceramic, 5: induct electrode, 7: gas 
+! Which leaves us with 1: lower metal, 2: upper metal, 3: drift electrode, 4: ceramic, 5: induct electrode, 7: gas
 ! Glueing all volumes so there are no superimposed areas
 VGLUE, ALL
 
 ! After glueing, volume names has become (you can read that from the log window):
 ! 1: lower metal, 2: upper metal, 3: drift electrode, 5: induct electrode, 6: ceramic, 8: gas
-! /COLOR, VOLU, WHIT, 
-! /COLOR, VOLU, LGRA, 
+! /COLOR, VOLU, WHIT,
+! /COLOR, VOLU, LGRA,
 ! /COLOR, VOLU, DGRA,
 /COLOR, VOLU, RED,  2
 ! /COLOR, VOLU, ORAN, 1
-! /COLOR, VOLU, YELL, 
+! /COLOR, VOLU, YELL,
 /COLOR, VOLU, YGRE, 1
 /COLOR, VOLU, GREEN, 5
 /COLOR, VOLU, GCYA, 6
 ! /COLOR, VOLU, CBLU,
  /COLOR, VOLU, BLUE, 8
-! /COLOR, VOLU, BMAG, 
-! /COLOR, VOLU, MAGE, 
+! /COLOR, VOLU, BMAG,
+! /COLOR, VOLU, MAGE,
 /COLOR, VOLU, MRED, 3
 ! /COLOR, VOLU, BLAO,
 
@@ -137,7 +138,7 @@ VATT, 3, , 1
 ! Voltage boundary conditions on the metal
 VSEL, S, VOLU, , 3
 ASLV, S
-DA, ALL, VOLT, cathodeVoltage 
+DA, ALL, VOLT, cathodeVoltage
 VSEL, S, VOLU, , 2
 ASLV, S
 DA, ALL, VOLT, upperVoltage
@@ -191,14 +192,21 @@ DA, ALL, SYMM
 
 ! Meshing options
 MSHKEY, 0
-SMRT, 1
-VSEL, S, VOLU, ,6
+SMRT, 2
+
+! First Method
+VSEL, S, VOLU, ,6, 8
 ASLV, S
-VMESH, 6
-VSEL, S, VOLU, ,8
-ASLV, S
-VMESH, 8
- 
+VMESH, ALL
+
+! Second Method
+! VSEL, S, VOLU, ,6
+! ASLV, S
+! VMESH, 6
+! VSEL, S, VOLU, ,8
+! ASLV, S
+! VMESH, 8
+
 ! Find the solution
 /SOLU
 SOLVE
