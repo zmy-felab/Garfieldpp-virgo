@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
     }
 
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0;
-    double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0.;
+    double xe0 = 0., ye0 = 0., ze0 = 0.21, te0 = 0., ee0 = 0.1;
     double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.;
     double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.;
     double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.;
@@ -222,17 +222,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < nEvents; i++)
     {
         // Randomize the initial position. RndmUniform->[0,1) RndmUniformPos->(0,1)
-        double x0 = -pitch / 2. + RndmUniform() * pitch;
-        double y0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
-        double z0 = RndmUniformPos()*0.2 + ceramic / 2.;
-        // double x0 = 0.;
-        // double y0 = 0.;
-        // double z0 = 0.21;
-        double t0 = 0.;
-        double e0 = 0.1;
+        xe0 = -pitch / 2. + RndmUniform() * pitch;
+        ye0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
+        ze0 = RndmUniformPos()*0.2 + ceramic / 2.;
         tt_pri->Fill();
 
-        aval->AvalancheElectron(x0, y0, z0, t0, e0, 0., 0., 0.);
+        aval->AvalancheElectron(xe0, ye0, ze0, te0, ee0, 0., 0., 0.);
         aval->GetAvalancheSize(ne, ni);
         np = aval->GetNumberOfElectronEndpoints();
 
@@ -256,7 +251,7 @@ int main(int argc, char *argv[])
 
         ntotal += np;
 
-        printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, z0 *10000, ni, ne, np, npp);
+        printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, xe0 * 10000, ye0 * 10000, ze0 *10000, ni, ne, np, npp);
 
         npp = 0;
     }
@@ -284,7 +279,6 @@ int main(int argc, char *argv[])
         TCanvas *cf = new TCanvas();
         fieldView->SetCanvas(cf);
         fieldView->PlotContour();                                 // e v p
-        fieldView->PlotSurface("e");                              // e v p
         fieldView->Plot("v", "CONT1");                            // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
         fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
     }
