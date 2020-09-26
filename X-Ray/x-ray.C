@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         if (string(argv[i]) == "-n")
         {
             nEvents = atoi(argv[i + 1]);
-            rootname += "_" + to_string(nEvents) + "Ele";
+            rootname += "_" + to_string(nEvents) + "Events";
         }
         else if (string(argv[i]) == "-v")
         {
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     aval_mc->SetSensor(sensor);
     aval_mc->SetDistanceSteps(2.e-4);
 
-    //
+    // Use Heed for simulating the photon absorption
     TrackHeed *track = new TrackHeed();
     track->SetSensor(sensor);
 
