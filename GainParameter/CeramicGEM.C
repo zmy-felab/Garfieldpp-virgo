@@ -179,39 +179,58 @@ int main(int argc, char *argv[])
     }
 
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0;
-    double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., e1 = 0.;
-    double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., e2 = 0.;
+    double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0.;
+    double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.;
+    double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.;
     double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.;
     double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
-    int status;
+    int statuse, statusi;
 
     TFile *ff = new TFile(rootname.c_str(), "RECREATE");
-    TTree *tt_ele = new TTree("ele", "Electrons information");
-    tt_ele->Branch("xe1", &xe1, "xe1/D");
-    tt_ele->Branch("ye1", &ye1, "ye1/D");
-    tt_ele->Branch("ze1", &ze1, "ze1/D");
-    tt_ele->Branch("te1", &te1, "te1/D");
-    tt_ele->Branch("xe2", &xe2, "xe2/D");
-    tt_ele->Branch("ye2", &ye2, "ye2/D");
-    tt_ele->Branch("ze2", &ze2, "ze2/D");
-    tt_ele->Branch("te2", &te2, "te2/D");
-    tt_ele->Branch("status", &status, "status/I");
+    TTree *tt_pri = new TTree("pri", "Primary electrons");
+    tt_pri->Branch("xe0", &xe0, "xe0/D");
+    tt_pri->Branch("ye0", &ye0, "ye0/D");
+    tt_pri->Branch("ze0", &ze0, "ze0/D");
     TTree *tt_gain = new TTree("gain", "Electrons avalanche");
     tt_gain->Branch("ne", &ne, "ne/I");
     tt_gain->Branch("ni", &ni, "ni/I");
     tt_gain->Branch("np", &np, "np/I");
     tt_gain->Branch("npp", &npp, "npp/I");
+    TTree *tt_ele = new TTree("ele", "Electrons information");
+    tt_ele->Branch("xe1", &xe1, "xe1/D");
+    tt_ele->Branch("ye1", &ye1, "ye1/D");
+    tt_ele->Branch("ze1", &ze1, "ze1/D");
+    tt_ele->Branch("te1", &te1, "te1/D");
+    tt_ele->Branch("ee1", &ee1, "ee1/D");
+    tt_ele->Branch("xe2", &xe2, "xe2/D");
+    tt_ele->Branch("ye2", &ye2, "ye2/D");
+    tt_ele->Branch("ze2", &ze2, "ze2/D");
+    tt_ele->Branch("ee2", &ee2, "ee2/D");
+    tt_ele->Branch("te2", &te2, "te2/D");
+    tt_ele->Branch("statuse", &statuse, "statuse/I");
+    TTree *tt_ion = new TTree("ion", "Ions information");
+    tt_ion->Branch("xi1", &xi1, "xe1/D");
+    tt_ion->Branch("yi1", &yi1, "yi1/D");
+    tt_ion->Branch("zi1", &zi1, "zi1/D");
+    tt_ion->Branch("ti1", &ti1, "ti1/D");
+    tt_ion->Branch("xi2", &xi2, "xi2/D");
+    tt_ion->Branch("yi2", &yi2, "yi2/D");
+    tt_ion->Branch("zi2", &zi2, "zi2/D");
+    tt_ion->Branch("ti2", &ti2, "ti2/D");
+    tt_ion->Branch("statusi", &statusi, "statusi/I");
 
     for (int i = 0; i < nEvents; i++)
     {
-        // Randomize the initial position.
+        // Randomize the initial position. RndmUniform->[0,1) RndmUniformPos->(0,1)
         double x0 = -pitch / 2. + RndmUniform() * pitch;
         double y0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
+        double z0 = RndmUniformPos()*0.2 + ceramic / 2.;
         // double x0 = 0.;
         // double y0 = 0.;
-        double z0 = 0.21;
+        // double z0 = 0.21;
         double t0 = 0.;
         double e0 = 0.1;
+        tt_pri->Fill();
 
         aval->AvalancheElectron(x0, y0, z0, t0, e0, 0., 0., 0.);
         aval->GetAvalancheSize(ne, ni);
@@ -219,23 +238,25 @@ int main(int argc, char *argv[])
 
         for (int j = 0; j < np; j++)
         {
-            aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, e1, xe2, ye2, ze2, te2, e2, status);
+            aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, ee1, xe2, ye2, ze2, te2, ee2, statuse);
             tt_ele->Fill();
 
+            // arrive to the readout plane
             if (ze2 <= -induct - metal - ceramic / 2.)
                 npp++;
 
             if (driftIon)
             {
                 aval_mc->DriftIon(xe1, ye1, ze1, te1);
-                aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, status);
+                aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, statusi);
+                tt_ion->Fill();
             }
         }
         tt_gain->Fill();
 
         ntotal += np;
 
-        printf("%d/%d: %10.1lfum %10.1lfum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, ni, ne, np, npp);
+        printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, x0 * 10000, y0 * 10000, z0 *10000, ni, ne, np, npp);
 
         npp = 0;
     }
