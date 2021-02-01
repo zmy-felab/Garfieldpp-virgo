@@ -105,10 +105,11 @@ int main(int argc, char *argv[])
     TApplication app("app", &argc, argv);
     plottingEngine.SetDefaultStyle();
 
-    const bool plotDrift = false;
-    const bool plotField = false;
-    const bool plotMesh = false;
-    const bool driftIon = false;
+    const bool plotDrift = true;
+    const bool plotField = true;
+    const bool plotFieldLine = true;
+    const bool plotMesh = true;
+    const bool driftIon = true;
     // const bool calculateSignal = false;
 
     // Information of detector [cm]
@@ -159,7 +160,7 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(thgem);
-    sensor->SetArea(-42 * pitch, -42 * pitch, -induct - metal - ceramic / 2., 42 * pitch, 42 * pitch, drift + metal + ceramic / 2.);
+    sensor->SetArea(-10 * pitch, -10 * pitch, -induct - metal - ceramic / 2., 10 * pitch, 10 * pitch, drift + metal + ceramic / 2.);
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
@@ -171,7 +172,6 @@ int main(int argc, char *argv[])
     ViewDrift *driftView = new ViewDrift();
     if (plotDrift)
     {
-        driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2., 3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
         aval->EnablePlotting(driftView);
 
         if (driftIon)
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
         // Randomize the initial position. RndmUniform->[0,1) RndmUniformPos->(0,1)
         xe0 = -pitch / 2. + RndmUniform() * pitch;
         ye0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
-        ze0 = RndmUniformPos()*0.2 + ceramic / 2.;
+        ze0 = RndmUniformPos() * 0.2 + ceramic / 2.;
         tt_pri->Fill();
 
         aval->AvalancheElectron(xe0, ye0, ze0, te0, ee0, 0., 0., 0.);
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 
         ntotal += np;
 
-        printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, xe0 * 10000, ye0 * 10000, ze0 *10000, ni, ne, np, npp);
+        printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
 
         npp = 0;
     }
@@ -260,41 +260,59 @@ int main(int argc, char *argv[])
 
     printf("Average Gain: %d / %d = %.2lf\n", ntotal, nEvents, (double)ntotal / nEvents);
 
-    if (plotDrift)
-    {
-        TCanvas *cd = new TCanvas();
-        driftView->SetCanvas(cd);
-        driftView->Plot();
-    }
     if (plotField)
     {
         ViewField *fieldView = new ViewField();
         fieldView->SetComponent(thgem);
         fieldView->SetPlane(0., -1., 0., 0., 0., 0.);
-        fieldView->SetArea(-3 * pitch / 2., -0.05, 3 * pitch / 2., 0.07);
-        double vmin = 0., vmax = 0.;
-        thgem->GetVoltageRange(vmin, vmax);
-        fieldView->SetVoltageRange(vmin, vmax);
+        double xmin = -3 * pitch / 2.;
+        double xmax = 3 * pitch / 2.;
+        double zmin = -0.05;
+        double zmax = 0.07;
+        fieldView->SetArea(xmin, zmin, xmax, zmax);
+        fieldView->EnableAutoRange();
+        // double vmin = 0., vmax = 0.;
+        // thgem->GetVoltageRange(vmin, vmax);
+        // fieldView->SetVoltageRange(vmin, vmax);
         // fieldView->SetElectricFieldRange(0., 10000.);
         TCanvas *cf = new TCanvas();
         fieldView->SetCanvas(cf);
-        fieldView->PlotContour();                                 // e v p
-        fieldView->Plot("v", "CONT1");                            // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
-        fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
+        fieldView->PlotContour(); // e v p
+        // fieldView->Plot("v", "CONT1"); // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
+        // fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
+
+        if (plotFieldLine)
+        {
+            vector<double> xf, yf, zf;
+            fieldView->EqualFluxIntervals(xmin, 0, 0.99 * zmax, xmax, 0, 0.99 * zmax, xf, yf, zf, 60);
+            fieldView->PlotFieldLines(xf, yf, zf, true, false);
+        }
     }
-    if (plotMesh)
+    if (plotDrift)
     {
-        ViewFEMesh *meshView = new ViewFEMesh();
-        meshView->SetComponent(thgem);
-        meshView->SetPlane(0, -1, 0, 0, 0, 0);
-        meshView->SetViewDrift(driftView);
-        meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch, drift + metal + ceramic / 2., 3 * pitch);
-        meshView->SetFillMesh(false);
-        meshView->EnableAxes();
-        meshView->SetYaxisTitle("z");
-        TCanvas *cm = new TCanvas();
-        meshView->SetCanvas(cm);
-        meshView->Plot();
+        TCanvas *cd = new TCanvas();
+        if (plotMesh)
+        {
+            ViewFEMesh *meshView = new ViewFEMesh();
+            meshView->SetComponent(thgem);
+            meshView->SetViewDrift(driftView);
+            meshView->SetPlane(0, -1, 0, 0, 0, 0);
+            meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch, drift + metal + ceramic / 2., 3 * pitch);
+            meshView->SetFillMesh(true);
+            meshView->SetColor(0, kBlack);
+            // set the color of ceramic
+            meshView->SetColor(2, kYellow + 2);
+            meshView->EnableAxes();
+            meshView->SetYaxisTitle("z[cm]");
+            meshView->SetCanvas(cd);
+            meshView->Plot();
+        }
+        else
+        {
+            driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2., 3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
+            driftView->SetCanvas(cd);
+            driftView->Plot();
+        }
     }
 
     // Print start and end time
