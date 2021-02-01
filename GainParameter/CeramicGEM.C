@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
     gas->SetComposition("ar", 90., "co2", 10.);
     gas->SetTemperature(temperature);
     gas->SetPressure(pressure);
+    // gas->LoadGasFile("ar_90_co2_10.gas");
     gas->EnableDebugging();
     gas->Initialise();
     gas->DisableDebugging();
