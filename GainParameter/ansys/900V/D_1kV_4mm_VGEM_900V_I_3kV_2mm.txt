@@ -194,10 +194,11 @@ MSHKEY, 0
 SMRT, 1
 VSEL, S, VOLU, ,6
 ASLV, S
-VMESH, 6
+!VMESH, 6
 VSEL, S, VOLU, ,8
 ASLV, S
-VMESH, 8
+!VMESH, 8
+VMESH, ALL
  
 ! Find the solution
 /SOLU
