@@ -33,7 +33,7 @@ for i in `seq 0 20`
 do
     echo $i $nEvents ${voltage}V ${driftE}kV/cm ${inductionE}kV/cm
     # run and save log
-    ./CeramicGEM -n $nEvents -v $voltage > "./runlog/${nEvents}_${voltage}_${driftE}_${inductionE}_${gas}.log" &
+    ./CeramicGEM -n $nEvents -v $voltage -d $driftE -i $inductionE > "./runlog/${nEvents}_${voltage}_${driftE}_${inductionE}_${gas}.log" &
 
     voltage=$(($voltage+20))
 done
