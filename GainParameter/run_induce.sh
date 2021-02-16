@@ -39,7 +39,7 @@ do
             do
                 echo D_${i}kV_I_${j}kV_GEM_${k}V
                 # run and save log
-                # ./CeramicGEM -n $nEvents -v $k -d $i -i $j > "./runlog/${nEvents}_${k}_${i}_${j}_${gas}.log" &
+                ./CeramicGEM -n $nEvents -v $k -d $i -i $j > "./runlog/${nEvents}_${k}_${i}_${j}_${gas}.log" &
             done
         fi
     done
