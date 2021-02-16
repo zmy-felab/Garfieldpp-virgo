@@ -1,4 +1,12 @@
 #!/bin/bash
+#SBATCH --mail-user=zhoujj@ihep.ac.cn
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=4
+#SBATCH --job-name=gain_induction
+#SBATCH --partition=public
+#SBATCH --ntasks-per-node=28
+#SBATCH --mem=60000m
+#SBATCH --output=mpi_job_slurm.log
 
 # complie code
 make CeramicGEM
@@ -44,3 +52,5 @@ do
         fi
     done
 done
+# Prevent the process killed.
+wait
