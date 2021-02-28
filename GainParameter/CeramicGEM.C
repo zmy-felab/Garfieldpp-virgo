@@ -15,6 +15,7 @@
 #include "Garfield/ViewFEMesh.hh"
 #include "Garfield/ViewSignal.hh"
 #include "Garfield/Plotting.hh"
+#include "Garfield/ComponentConstant.hh"
 #include "Garfield/Random.hh"
 
 using namespace Garfield;
@@ -27,7 +28,8 @@ namespace
         cerr << " ./CeramicGEM [-n nEvents] [-p Pressure] [-t Temperature] [-v Voltage] [-d Drift] [-i Induction] [-r Rim]" << endl;
     }
 } // namespace
-double GetPenning(double p, double c);
+double GetPenning(double p, string gas1, string gas2, double c2);
+
 int main(int argc, char *argv[])
 {
     if (argc > 15)
@@ -37,13 +39,13 @@ int main(int argc, char *argv[])
     }
 
     // Default parameters
-    int    nEvents     = 10;      // num
-    double pressure    = 760.;    // Torr
-    double temperature = 293.15;  // K
-    int    voltage     = 900;     // Voltage
-    double driftE      = 1.;      // kV/cm
-    double inductionE  = 3.;      // kV/cm
-    int    rim         = 80;      // um
+    int nEvents = 10;            // num
+    double pressure = 1.;        // atm
+    double temperature = 293.15; // K
+    int voltage = 900;           // Voltage
+    double driftE = 1.;          // kV/cm
+    double inductionE = 3.;      // kV/cm
+    int rim = 80;                // um
 
     string rootname = "./result/";
 
@@ -57,12 +59,16 @@ int main(int argc, char *argv[])
         else if (string(argv[i]) == "-p")
         {
             pressure = atof(argv[i + 1]);
-            rootname += "_P_" + to_string(pressure);
+            char temp[10];
+            sprintf(temp, "%.1fatm", pressure);
+            rootname += "_P_" + string(temp);
         }
         else if (string(argv[i]) == "-t")
         {
             temperature = atof(argv[i + 1]);
-            rootname += "_T_" + to_string(temperature);
+            char temp[10];
+            sprintf(temp, "%.2fK", temperature);
+            rootname += "_T_" + string(temp);
         }
         else if (string(argv[i]) == "-v")
         {
@@ -109,21 +115,21 @@ int main(int argc, char *argv[])
     TApplication app("app", &argc, argv);
     plottingEngine.SetDefaultStyle();
 
-    const bool saveData        = true;
-    const bool plotDrift       = false;
-    const bool plotField       = false;
-    const bool plotFieldLine   = false;
-    const bool plotMesh        = false;
-    const bool driftIon        = false;
+    const bool saveData = true;
+    const bool plotDrift = false;
+    const bool plotField = false;
+    const bool plotFieldLine = false;
+    const bool plotMesh = false;
+    const bool driftIon = false;
     // const bool calculateSignal = false;
 
     // Information of detector [cm]
-    const double pitch   = 0.06;
+    const double pitch = 0.06;
     // const double dia     = 0.02;
     const double ceramic = 168.e-4;
-    const double metal   = 18.e-4;
-    const double drift   = 0.2;
-    const double induct  = 0.2;
+    const double metal = 18.e-4;
+    const double drift = 0.2;
+    const double induct = 0.2;
 
     // Load the field map.
     ComponentAnsys123 *thgem = new ComponentAnsys123();
@@ -134,30 +140,36 @@ int main(int argc, char *argv[])
 
     // Setup the gas.
     string gas1 = "ar", gas2 = "co2";
-    double f1   = 90.,  f2   = 10.;
-    string gasfile = "./GasFile/" + gas1 + "_" + to_string(int(f1)) + "_" + gas2 + "_" + to_string(int(f2)) + ".gas";
+    double f1 = 90., f2 = 10.;
+    string mixgas = gas1 + "_" + to_string(int(f1)) + "_" + gas2 + "_" + to_string(int(f2));
+    string gasfilePath = "./GasFile/" + mixgas + ".gas";
     MediumMagboltz *gas = new MediumMagboltz();
     gas->SetComposition(gas1, f1, gas2, f2);
     gas->SetTemperature(temperature);
-    gas->SetPressure(pressure);
-    gas->LoadGasFile(gasfile);
+    gas->SetPressure(pressure * AtmosphericPressure);
+    gas->LoadGasFile(gasfilePath);
     gas->EnableDebugging();
     gas->Initialise();
     gas->DisableDebugging();
     // gas->PrintGas();
     // Set the Penning transfer efficiency.
-    const double rPenning      = GetPenning(pressure, f2);
+    const double rPenning = GetPenning(pressure, gas1, gas2, f2 / 100.);
     const double lambdaPenning = 0.;
     gas->EnablePenningTransfer(rPenning, lambdaPenning, gas1);
     // Load the ion mobilities.
     if (driftIon)
     {
-        if (gas1 == "he")      gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_He+_He.txt");
-        else if (gas1 == "ne") gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ne+_Ne.txt");
-        else if (gas1 == "ar") gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ar+_Ar.txt");
-        else                   cout << "Please set correct nobe gas." << endl;
+        if (gas1 == "he")
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_He+_He.txt");
+        else if (gas1 == "ne")
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ne+_Ne.txt");
+        else if (gas1 == "ar")
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ar+_Ar.txt");
+        else
+            cout << "Please set correct nobe gas." << endl;
 
-        if (gas2 == "co2")     gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_CO2+_CO2.txt");
+        if (gas2 == "co2")
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_CO2+_CO2.txt");
     }
 
     // Associate the gas with the corresponding field map material.
@@ -165,7 +177,8 @@ int main(int argc, char *argv[])
     for (unsigned int i = 0; i < nMaterials; ++i)
     {
         const double eps = thgem->GetPermittivity(i);
-        if (eps == 1.) thgem->SetMedium(i, gas);
+        if (eps == 1.)
+            thgem->SetMedium(i, gas);
     }
     thgem->PrintMaterials();
 
@@ -185,7 +198,8 @@ int main(int argc, char *argv[])
     if (plotDrift)
     {
         aval->EnablePlotting(driftView);
-        if (driftIon) aval_mc->EnablePlotting(driftView);
+        if (driftIon)
+            aval_mc->EnablePlotting(driftView);
     }
 
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0, ntotaleff = 0;
@@ -200,7 +214,7 @@ int main(int argc, char *argv[])
     TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion;
     if (saveData)
     {
-        rootname = rootname + "_" + gas1 + "_" + to_string(int(f1)) + "_" + gas2 + "_" + to_string(int(f2)) + ".root";
+        rootname = rootname + "_" + mixgas + ".root";
 
         ff = new TFile(rootname.c_str(), "RECREATE");
         tt_pri = new TTree("pri", "Primary electrons");
@@ -227,17 +241,21 @@ int main(int argc, char *argv[])
         tt_ele->Branch("te2", &te2, "te2/D");
         tt_ele->Branch("statuse", &statuse, "statuse/I");
         tt_ele->AutoSave();
-        tt_ion = new TTree("ion", "Ions information");
-        tt_ion->Branch("xi1", &xi1, "xe1/D");
-        tt_ion->Branch("yi1", &yi1, "yi1/D");
-        tt_ion->Branch("zi1", &zi1, "zi1/D");
-        tt_ion->Branch("ti1", &ti1, "ti1/D");
-        tt_ion->Branch("xi2", &xi2, "xi2/D");
-        tt_ion->Branch("yi2", &yi2, "yi2/D");
-        tt_ion->Branch("zi2", &zi2, "zi2/D");
-        tt_ion->Branch("ti2", &ti2, "ti2/D");
-        tt_ion->Branch("statusi", &statusi, "statusi/I");
-        tt_ion->AutoSave();
+
+        if (driftIon)
+        {
+            tt_ion = new TTree("ion", "Ions information");
+            tt_ion->Branch("xi1", &xi1, "xe1/D");
+            tt_ion->Branch("yi1", &yi1, "yi1/D");
+            tt_ion->Branch("zi1", &zi1, "zi1/D");
+            tt_ion->Branch("ti1", &ti1, "ti1/D");
+            tt_ion->Branch("xi2", &xi2, "xi2/D");
+            tt_ion->Branch("yi2", &yi2, "yi2/D");
+            tt_ion->Branch("zi2", &zi2, "zi2/D");
+            tt_ion->Branch("ti2", &ti2, "ti2/D");
+            tt_ion->Branch("statusi", &statusi, "statusi/I");
+            tt_ion->AutoSave();
+        }
     }
     for (int i = 0; i < nEvents; i++)
     {
@@ -245,7 +263,8 @@ int main(int argc, char *argv[])
         xe0 = -pitch / 2. + RndmUniform() * pitch;
         ye0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
         // ze0 = RndmUniformPos() * 0.2 + ceramic / 2.;
-        if (saveData) tt_pri->Fill();
+        if (saveData)
+            tt_pri->Fill();
 
         aval->AvalancheElectron(xe0, ye0, ze0, te0, ee0, 0., 0., 0.);
         aval->GetAvalancheSize(ne, ni);
@@ -254,21 +273,25 @@ int main(int argc, char *argv[])
         for (int j = 0; j < np; j++)
         {
             aval->GetElectronEndpoint(j, xe1, ye1, ze1, te1, ee1, xe2, ye2, ze2, te2, ee2, statuse);
-            if (saveData) tt_ele->Fill();
+            if (saveData)
+                tt_ele->Fill();
 
             // arrive to the readout plane
-            if (ze2 <= -induct - metal - ceramic / 2.) npp++;
+            if (ze2 <= -induct - metal - ceramic / 2.)
+                npp++;
 
             if (driftIon)
             {
                 aval_mc->DriftIon(xe1, ye1, ze1, te1);
                 aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, statusi);
-                if (saveData) tt_ion->Fill();
+                if (saveData)
+                    tt_ion->Fill();
             }
         }
-        if (saveData) tt_gain->Fill();
+        if (saveData)
+            tt_gain->Fill();
 
-        ntotal    += np;
+        ntotal += np;
         ntotaleff += npp;
 
         printf("%d/%d: %10.1lfum %10.1lfum  %10.1fum %10d %10d %10d %10d\n", i, nEvents, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
@@ -350,19 +373,59 @@ int main(int argc, char *argv[])
     if (plotDrift || plotField)
         app.Run(kTRUE);
 }
-// calculate penning coefficient of the mixture gas of ar and co2.
-// p was the pressure (torr), c was the fraction of co2.
-double GetPenning(double p, double c)
+// calculate penning coefficient of the mixture gas.
+// p was the pressure (atm), gas1 (he, ne, ar), gas2 (co2, n2, ch4, ic4h10...), c was the fraction of gas2 (co2 or n2).
+double GetPenning(double p, string gas1, string gas2, double c2)
 {
-    p /= 760.; // from torr to atm.
-    c /= 100.;
+    double penning = 0.5;
+    if (gas1 == "ar")
+    {
+        if (gas2 == "co2")
+        {
+            double a1 = 0.627898;
+            double a2 = 0.041394;
+            double a3 = 0.004716;
+            double a4 = 0.001562;
+            double a5 = 0.002422;
+            double a6 = 0.027115;
 
-    double a1 = 0.627898;
-    double a2 = 0.041394;
-    double a3 = 0.004716;
-    double a4 = 0.001562;
-    double a5 = 0.002422;
-    double a6 = 0.027115;
+            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a1 * p * c2 + a4 * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + p * c2 + a2);
+        }
+    }
+    else if (gas1 == "ne")
+    {
+        if (gas2 == "co2")
+        {
+            double a1 = 0.71104;
+            double a2 = 0.06323;
+            double a3 = 0.03085;
+            double a4 = 4.20089;
+            double a5 = 0.07831;
+            double a6 = 0.13235;
+            double a7 = 1.47470;
 
-    return (a5 * p * p * (1 - c) * (1 - c) + a1 * p * c + a4 * c + a3) / (a6 * p * p * (1 - c) * (1 - c) + p * c + a2);
+            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a4 * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
+        }
+        else if (gas2 == "n2")
+        {
+            double a1 = 0.55802;
+            double a2 = 0.00514;
+            double a3 = 0.00206;
+            double a4 = 0.55385;
+            double a5 = 0.01153;
+            double a6 = 0.02073;
+            double a7 = 0.01;
+
+            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a4 * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
+        }
+        else
+        {
+            cout << "Default Penning Coefficient" << endl;
+        }
+    }
+    else
+    {
+        cout << "Default Penning Coefficient" << endl;
+    }
+    return penning;
 }
