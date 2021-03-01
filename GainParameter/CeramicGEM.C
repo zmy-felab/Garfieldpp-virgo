@@ -115,21 +115,21 @@ int main(int argc, char *argv[])
     TApplication app("app", &argc, argv);
     plottingEngine.SetDefaultStyle();
 
-    const bool saveData = true;
+    const bool saveData  = false;
     const bool plotDrift = false;
     const bool plotField = false;
-    const bool plotFieldLine = false;
-    const bool plotMesh = false;
-    const bool driftIon = false;
+    const bool plotLine  = false;
+    const bool plotMesh  = false;
+    const bool driftIon  = false;
     // const bool calculateSignal = false;
 
     // Information of detector [cm]
-    const double pitch = 0.06;
-    // const double dia     = 0.02;
+    const double pitch   = 0.06;
+    const double dia     = 0.02;
     const double ceramic = 168.e-4;
-    const double metal = 18.e-4;
-    const double drift = 0.2;
-    const double induct = 0.2;
+    const double metal   = 18.e-4;
+    const double drift   = 0.2;
+    const double induct  = 0.2;
 
     // Load the field map.
     ComponentAnsys123 *thgem = new ComponentAnsys123();
@@ -201,6 +201,21 @@ int main(int argc, char *argv[])
         if (driftIon)
             aval_mc->EnablePlotting(driftView);
     }
+
+    cout << "---------------------------------------------\n" 
+         << "Detector Parameters\n"
+         << "Drift Region:     " << drift  * 10 << "mm  Electric Field: " << driftE << "kV/cm\n"
+         << "Induction Region: " << induct * 10 << "mm  Electric Field: " << inductionE << "kV/cm\n"
+         << "GEM Voltage:      " << voltage << "V\n"
+         << "GEM Parameters:   " << "Pitch    " << pitch * 10000 << "um\n"
+         << "                  Diameter " << dia * 10000 << "um\n"
+         << "                  Ceramic  " << ceramic * 10000 << "um\n"
+         << "                  Metal    " << metal * 10000 << "um\n"
+         << "                  Rim      " << rim << "um\n"
+         << "Gas:              " << gas1 << "/" << gas2 << "(" << f1 << "/" << f2 << ")\n"
+         << "Pressure:         " << pressure << "atm\n"
+         << "Temperature:      " << temperature << "K\n"
+         << "--------------------------------------------" << endl;
 
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0, ntotaleff = 0;
     double xe0 = 0., ye0 = 0., ze0 = 0.21, te0 = 0., ee0 = 0.1;
@@ -329,7 +344,7 @@ int main(int argc, char *argv[])
         // fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
 
         // master
-        if (plotFieldLine)
+        if (plotLine)
         {
             vector<double> xf, yf, zf;
             fieldView->EqualFluxIntervals(xmin, 0, 0.99 * zmax, xmax, 0, 0.99 * zmax, xf, yf, zf, 60);
