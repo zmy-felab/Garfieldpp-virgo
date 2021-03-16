@@ -39,13 +39,13 @@ int main(int argc, char *argv[])
     }
 
     // Default parameters
-    int nEvents = 10;            // num
-    double pressure = 1.;        // atm
-    double temperature = 293.15; // K
-    int voltage = 900;           // Voltage
-    double driftE = 1.;          // kV/cm
-    double inductionE = 3.;      // kV/cm
-    int rim = 80;                // um
+    int nEvents = 10;         // num
+    double pressure = 1.;     // atm
+    double temperature = 20.; // C
+    int voltage = 900;        // Voltage
+    double driftE = 1.;       // kV/cm
+    double inductionE = 3.;   // kV/cm
+    int rim = 80;             // um
 
     string rootname = "./result/";
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         {
             temperature = atof(argv[i + 1]);
             char temp[10];
-            sprintf(temp, "%.2fK", temperature);
+            sprintf(temp, "%.1fC", temperature);
             rootname += "_T_" + string(temp);
         }
         else if (string(argv[i]) == "-v")
@@ -115,21 +115,21 @@ int main(int argc, char *argv[])
     TApplication app("app", &argc, argv);
     plottingEngine.SetDefaultStyle();
 
-    const bool saveData  = false;
+    const bool saveData = false;
     const bool plotDrift = false;
     const bool plotField = false;
-    const bool plotLine  = false;
-    const bool plotMesh  = false;
-    const bool driftIon  = false;
+    const bool plotLine = false;
+    const bool plotMesh = false;
+    const bool driftIon = false;
     // const bool calculateSignal = false;
 
     // Information of detector [cm]
-    const double pitch   = 0.06;
-    const double dia     = 0.02;
+    const double pitch = 0.06;
+    const double dia = 0.02;
     const double ceramic = 168.e-4;
-    const double metal   = 18.e-4;
-    const double drift   = 0.2;
-    const double induct  = 0.2;
+    const double metal = 18.e-4;
+    const double drift = 0.2;
+    const double induct = 0.2;
 
     // Load the field map.
     ComponentAnsys123 *thgem = new ComponentAnsys123();
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
     string gasfilePath = "./GasFile/" + mixgas + ".gas";
     MediumMagboltz *gas = new MediumMagboltz();
     gas->SetComposition(gas1, f1, gas2, f2);
-    gas->SetTemperature(temperature);
+    gas->SetTemperature(temperature + 273.15);
     gas->SetPressure(pressure * AtmosphericPressure);
     gas->LoadGasFile(gasfilePath);
     gas->EnableDebugging();
@@ -202,19 +202,20 @@ int main(int argc, char *argv[])
             aval_mc->EnablePlotting(driftView);
     }
 
-    cout << "---------------------------------------------\n" 
+    cout << "---------------------------------------------\n"
          << "Detector Parameters\n"
-         << "Drift Region:     " << drift  * 10 << "mm  Electric Field: " << driftE << "kV/cm\n"
+         << "Drift Region:     " << drift * 10 << "mm  Electric Field: " << driftE << "kV/cm\n"
          << "Induction Region: " << induct * 10 << "mm  Electric Field: " << inductionE << "kV/cm\n"
          << "GEM Voltage:      " << voltage << "V\n"
-         << "GEM Parameters:   " << "Pitch    " << pitch * 10000 << "um\n"
+         << "GEM Parameters:   "
+         << "Pitch    " << pitch * 10000 << "um\n"
          << "                  Diameter " << dia * 10000 << "um\n"
          << "                  Ceramic  " << ceramic * 10000 << "um\n"
          << "                  Metal    " << metal * 10000 << "um\n"
          << "                  Rim      " << rim << "um\n"
          << "Gas:              " << gas1 << "/" << gas2 << "(" << f1 << "/" << f2 << ")\n"
          << "Pressure:         " << pressure << "atm\n"
-         << "Temperature:      " << temperature << "K\n"
+         << "Temperature:      " << temperature << "C\n"
          << "--------------------------------------------" << endl;
 
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0, ntotaleff = 0;
