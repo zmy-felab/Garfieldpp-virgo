@@ -15,15 +15,15 @@ namespace
 	void PrintUsage()
 	{
 		cerr << " Usage: " << endl;
-		cerr << " ./generate [-g1 Gas1] [-f1 Fraction1] [-g2 Gas2] [-f2 Fraction2] [-g3 Gas3] [-f3 Fraction3] [-p Pressure] [-k Temperature]" << endl;
+		cerr << " ./generate [-g1 Gas1] [-f1 Fraction1] [-g2 Gas2] [-f2 Fraction2] [-g3 Gas3] [-f3 Fraction3] [-p Pressure] [-t Temperature]" << endl;
 	}
 } // namespace
 
 int main(int argc, char *argv[])
 {
-	TApplication app("app", &argc, argv);
+	TApplication *app = new TApplication("app", &argc, argv);
 
-	if (argc < 3)
+	if (app->Argc() < 3)
 	{
 		PrintUsage();
 		return 1;
@@ -39,58 +39,57 @@ int main(int argc, char *argv[])
 
 	string filename = "./result/";
 
-	for (int i = 1; i < argc; i = i + 2)
+	for (int i = 1; i < app->Argc(); i = i + 2)
 	{
-		if (string(argv[i]) == "-g1")
+		if (string(app->Argv(i)) == "-g1")
 		{
-			gas1 = string(argv[i + 1]);
+			gas1 = string(app->Argv(i + 1));
 			filename += gas1;
 		}
-		else if (string(argv[i]) == "-f1")
+		else if (string(app->Argv(i)) == "-f1")
 		{
-			fra1 = atof(argv[i + 1]);
+			fra1 = atof(app->Argv(i + 1));
 			fraction += fra1;
 			char temp[10];
 			sprintf(temp, "%.1f", fra1);
 			filename += "_" + string(temp);
 		}
-		else if (string(argv[i]) == "-g2")
+		else if (string(app->Argv(i)) == "-g2")
 		{
-			gas2 = string(argv[i + 1]);
+			gas2 = string(app->Argv(i + 1));
 			filename += "_" + gas2;
 		}
-		else if (string(argv[i]) == "-f2")
+		else if (string(app->Argv(i)) == "-f2")
 		{
-			fra2 = atof(argv[i + 1]);
+			fra2 = atof(app->Argv(i + 1));
 			fraction += fra2;
 			char temp[10];
 			sprintf(temp, "%.1f", fra2);
 			filename += "_" + string(temp);
 		}
-		else if (string(argv[i]) == "-g3")
+		else if (string(app->Argv(i)) == "-g3")
 		{
-			gas3 = string(argv[i + 1]);
+			gas3 = string(app->Argv(i + 1));
 			filename += "_" + gas3;
 		}
-		else if (string(argv[i]) == "-f3")
+		else if (string(app->Argv(i)) == "-f3")
 		{
-			fra3 = atof(argv[i + 1]);
+			fra3 = atof(app->Argv(i + 1));
 			fraction += fra3;
 			char temp[10];
 			sprintf(temp, "%.1f", fra3);
 			filename += "_" + string(temp);
 		}
-		else if (string(argv[i]) == "-p")
+		else if (string(app->Argv(i)) == "-p")
 		{
-			pre = atof(argv[i + 1]);
+			pre = atof(app->Argv(i + 1));
 			char temp[10];
 			sprintf(temp, "%.1fatm", pre);
 			filename += "_" + string(temp);
 		}
-		// "-t" can not work.
-		else if (string(argv[i]) == "-k")
+		else if (string(app->Argv(i)) == "-t")
 		{
-			tem = atof(argv[i + 1]);
+			tem = atof(app->Argv(i + 1));
 			char temp[10];
 			sprintf(temp, "%.1fC", tem);
 			filename += "_" + string(temp);
@@ -137,5 +136,5 @@ int main(int argc, char *argv[])
 	// Save the table.
 	gas->WriteGasFile(filename);
 
-	// app.Run(kTRUE);
+	// app->Run(kTRUE);
 }
