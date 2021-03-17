@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 	MediumMagboltz *gas = new MediumMagboltz();
 
 	gas->SetComposition(gas1, fra1, gas2, fra2, gas3, fra3);
-	gas->SetTemperature(273.15 + tem);
+	gas->SetTemperature(tem + ZeroCelsius);
 	gas->SetPressure(pre * AtmosphericPressure);
 	// gas->SetMaxElectronEnergy(500);
 
