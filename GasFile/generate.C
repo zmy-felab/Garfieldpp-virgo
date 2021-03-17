@@ -15,7 +15,7 @@ namespace
 	void PrintUsage()
 	{
 		cerr << " Usage: " << endl;
-		cerr << " ./generate [-g1 Gas1] [-f1 Fraction1] [-g2 Gas2] [-f2 Fraction2] [-g3 Gas3] [-f3 Fraction3] [-p Pressure] [-t Temperature]" << endl;
+		cerr << " ./generate [-g1 Gas1] [-f1 Fraction1] [-g2 Gas2] [-f2 Fraction2] [-g3 Gas3] [-f3 Fraction3] [-p Pressure] [-k Temperature]" << endl;
 	}
 } // namespace
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 		if (string(argv[i]) == "-g1")
 		{
 			gas1 = string(argv[i + 1]);
-			filename += "_" + gas1;
+			filename += gas1;
 		}
 		else if (string(argv[i]) == "-f1")
 		{
@@ -87,7 +87,8 @@ int main(int argc, char *argv[])
 			sprintf(temp, "%.1fatm", pre);
 			filename += "_" + string(temp);
 		}
-		else if (string(argv[i]) == "-t")
+		// "-t" can not work.
+		else if (string(argv[i]) == "-k")
 		{
 			tem = atof(argv[i + 1]);
 			char temp[10];
@@ -123,6 +124,12 @@ int main(int argc, char *argv[])
 	// Flag to request logarithmic spacing.
 	const bool useLog = true;
 	gas->SetFieldGrid(emin, emax, nFields, useLog);
+
+	// Set the angle between E- and B-field to 0 instead of 90 degrree.
+	vector<double> efields, bfields, angles;
+	gas->GetFieldGrid(efields, bfields, angles);
+	angles = {0.};
+	gas->SetFieldGrid(efields, bfields, angles);
 
 	const int ncoll = 10;
 	// Run Magboltz to generate the gas table.
