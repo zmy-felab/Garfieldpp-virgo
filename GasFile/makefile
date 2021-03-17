@@ -9,11 +9,13 @@ CFLAGS = -Wall -Wextra -Wno-long-long \
 LDFLAGS = -lGarfield `root-config --glibs` -lGeom -lgfortran -lm
 
 TARGET = generate
-
 $(TARGET): $(TARGET).C 
 	$(CXX) $(CFLAGS) $(TARGET).C
 	$(CXX) `root-config --cflags` -o $(TARGET) $(TARGET).o $(LDFLAGS)
 	rm $(TARGET).o
-.PHONY: clean
-clean:
-	rm $(TARGET)
+
+TARGET = read
+$(TARGET): $(TARGET).C 
+	$(CXX) $(CFLAGS) $(TARGET).C
+	$(CXX) `root-config --cflags` -o $(TARGET) $(TARGET).o $(LDFLAGS)
+	rm $(TARGET).o
