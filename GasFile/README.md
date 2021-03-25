@@ -11,6 +11,11 @@
 - generate.C
 - read.C
 - makefile
+
+`generate.C` 程序有个 `bug` ，与 `Garfield++` 版本有关，可以在 `2.0` 版本下正常运行， `3.0` 及 `master` 版本会偶尔出现 `WARNING ENERGY OUT OF RANGE, INCREASE ELECTRON ENERGY INTEGRATION RANGE` 的中断。
+
+`2.0` 版本生成的 `gas` 文件与 `3.0` 及 `master` 版本不同，不过均可通过 `read.C` 程序读取不同的物理参量绘图。
+
 ### 生成气体文件
 气体文件的后缀为 `.gas`，创建 `result` 与 `runlog` 文件夹，`result` 用来存放 `gas` 文件，`runlog` 用来存放运行日志。运行日志包含所有的计算结果。
 ```bash
