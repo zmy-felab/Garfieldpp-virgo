@@ -8,14 +8,13 @@ CFLAGS = -Wall -Wextra -Wno-long-long \
 
 LDFLAGS = -lGarfield `root-config --glibs` -lGeom -lgfortran -lm
 
-TARGET = generate
-$(TARGET): $(TARGET).C 
-	$(CXX) $(CFLAGS) $(TARGET).C
-	$(CXX) `root-config --cflags` -o $(TARGET) $(TARGET).o $(LDFLAGS)
-	rm $(TARGET).o
-
-TARGET = read
-$(TARGET): $(TARGET).C 
-	$(CXX) $(CFLAGS) $(TARGET).C
-	$(CXX) `root-config --cflags` -o $(TARGET) $(TARGET).o $(LDFLAGS)
-	rm $(TARGET).o
+all: generate read
+.PHONY: all
+generate: generate.C 
+	$(CXX) $(CFLAGS) generate.C
+	$(CXX) `root-config --cflags` -o generate generate.o $(LDFLAGS)
+	rm generate.o
+read: read.C 
+	$(CXX) $(CFLAGS) read.C
+	$(CXX) `root-config --cflags` -o read read.o $(LDFLAGS)
+	rm read.o
