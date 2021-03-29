@@ -1,11 +1,11 @@
 # 陶瓷GEM探测器增益模拟
 
 ## 运行环境及方法
-garfieldpp版本为3.0。
+`garfieldpp` 版本为 `3.0` 或 `master` ，绘制电场线需要 `master` 版本。
 
-推荐通过makefile编译。
+推荐通过 `makefile` 编译。
 
-（CMake编译需将ansys生成的lis文件放在与程序同级目录，同时修改程序中读取路径。）
+（ `CMake` 编译需修改程序中 `ansys` 生成的 `lis` 文件路径以及数据保存路径及运行日志路径。）
 
 设置好`run.sh`文件中的参数，在终端输入：
 ``` bash
