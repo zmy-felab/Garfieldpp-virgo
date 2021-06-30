@@ -132,7 +132,7 @@ void ReadGas(const string dataDir)
 		{
 			mg[i] = new TMultiGraph();
 			lg[i] = new TLegend();
-			int color[12] = {1, 2,3,4,5,6,7,8,9,28,38,50};
+			int color[12] = {1,2,3,4,kOrange+7,6,7,8,9,28,38,50};
 			for(int j = 0; j < num; j++)
 			{
 				gr[i][j]->SetLineWidth(2);
