@@ -1,4 +1,4 @@
-INCDIR = $(GARFIELD_HOME)/Include
+INCDIR = $(GARFIELD_HOME)/include
 
 # Compiler flags
 CFLAGS = -Wall -Wextra -Wno-long-long \

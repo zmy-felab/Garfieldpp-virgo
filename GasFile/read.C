@@ -23,10 +23,10 @@ int main(int argc, char *argv[])
 	gas->LoadGasFile(string(app.Argv(1)));
 	gas->PrintGas();
 
-	// const std::string path = getenv("GARFIELD_HOME");
-	// gas->LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");
-	// gas->LoadIonMobility(path + "/Data/IonMobility_Ne+_Ne.txt");
-	// gas->LoadIonMobility(path + "/Data/IonMobility_He+_He.txt");
+	const std::string path = getenv("GARFIELD_INSTALL");
+	gas->LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
+	gas->LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ne+_Ne.txt");
+	gas->LoadIonMobility(path + "/share/Garfield/Data/IonMobility_He+_He.txt");
 
 	ViewMedium *view = new ViewMedium();
 	view->SetMedium(gas);
