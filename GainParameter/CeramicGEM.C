@@ -28,6 +28,7 @@ namespace
         cerr << " ./CeramicGEM [-n nEvents] [-p Pressure] [-t Temperature] [-v Voltage] [-d Drift] [-i Induction] [-r Rim]" << endl;
     }
 } // namespace
+double transfer(double t);
 double GetPenning(double p, string gas1, string gas2, double c2);
 
 int main(int argc, char *argv[])
@@ -115,13 +116,14 @@ int main(int argc, char *argv[])
     TApplication app("app", &argc, argv);
     plottingEngine.SetDefaultStyle();
 
-    const bool saveData = false;
-    const bool plotDrift = false;
-    const bool plotField = false;
-    const bool plotLine = false;
-    const bool plotMesh = false;
-    const bool driftIon = false;
-    // const bool calculateSignal = false;
+    const bool saveData = true;
+    const bool plotDrift = true;
+    const bool plotField = true;
+    const bool plotLine = true;
+    const bool plotMesh = true;
+    const bool driftIon = true;
+    const bool calSignal = true;
+    const bool plotSignal = true;
 
     // Information of detector [cm]
     const double pitch = 0.06;
@@ -137,6 +139,13 @@ int main(int argc, char *argv[])
     thgem->EnableMirrorPeriodicityX();
     thgem->EnableMirrorPeriodicityY();
     thgem->PrintRange();
+    if (calSignal)
+    {
+        thgem->SetWeightingField(string(ansysPath) + "Anode.lis", "anode");
+        // thgem->SetWeightingField(string(ansysPath) + "GEMDown.lis", "gemdown");
+        // thgem->SetWeightingField(string(ansysPath) + "GEMUp.lis", "gemup");
+        // thgem->SetWeightingField(string(ansysPath) + "Cathode.lis", "cathode");
+    }
 
     // Setup the gas.
     string gas1 = "ar", gas2 = "co2";
@@ -160,16 +169,16 @@ int main(int argc, char *argv[])
     if (driftIon)
     {
         if (gas1 == "he")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_He+_He.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_He+_He.txt");
         else if (gas1 == "ne")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ne+_Ne.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_Ne+_Ne.txt");
         else if (gas1 == "ar")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_Ar+_Ar.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
         else
             cout << "Please set correct nobe gas." << endl;
 
         if (gas2 == "co2")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/Data/IonMobility_CO2+_CO2.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_CO2+_CO2.txt");
     }
 
     // Associate the gas with the corresponding field map material.
@@ -185,14 +194,36 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(thgem);
+    if (calSignal)
+    {
+        sensor->AddElectrode(thgem, "anode");
+        // sensor->AddElectrode(thgem, "gemdown");
+        // sensor->AddElectrode(thgem, "gemup");
+        // sensor->AddElectrode(thgem, "cathode");
+        const double tMin = -1.;
+        const double tMax = 300.;
+        const double tStep = 0.1;
+        const int nTimeBins = int((tMax - tMin) / tStep);
+        sensor->SetTimeWindow(0, tStep, nTimeBins);
+        sensor->SetTransferFunction(transfer);
+        sensor->ClearSignal();
+    }
     sensor->SetArea(-10 * pitch, -10 * pitch, -induct - metal - ceramic / 2., 10 * pitch, 10 * pitch, drift + metal + ceramic / 2.);
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
+    if (calSignal)
+        aval->EnableSignalCalculation();
 
-    AvalancheMC *aval_mc = new AvalancheMC();
-    aval_mc->SetSensor(sensor);
-    aval_mc->SetDistanceSteps(2.e-4);
+    AvalancheMC *aval_mc = nullptr;
+    if (driftIon)
+    {
+        aval_mc = new AvalancheMC();
+        aval_mc->SetSensor(sensor);
+        if (calSignal)
+            aval_mc->EnableSignalCalculation();
+        aval_mc->SetDistanceSteps(2.e-4);
+    }
 
     ViewDrift *driftView = new ViewDrift();
     if (plotDrift)
@@ -224,10 +255,11 @@ int main(int argc, char *argv[])
     double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.;
     double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.;
     double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
+    double sa = 0., sd = 0., su = 0., sc = 0.;
     int statuse, statusi;
 
     TFile *ff;
-    TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion;
+    TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion, *tt_s;
     if (saveData)
     {
         rootname = rootname + "_" + mixgas + ".root";
@@ -272,6 +304,15 @@ int main(int argc, char *argv[])
             tt_ion->Branch("statusi", &statusi, "statusi/I");
             tt_ion->AutoSave();
         }
+        if (calSignal)
+        {
+            tt_s = new TTree("signal", "Signal information");
+            tt_s->Branch("anode", &sa, "sa/D");
+            // tt_s->Branch("GEMDown", &sd, "sd/D");
+            // tt_s->Branch("GEMUp", &su, "su/D");
+            // tt_s->Branch("Cathode", &sc, "sc/D");
+            tt_s->AutoSave();
+        }
     }
     for (int i = 0; i < nEvents; i++)
     {
@@ -314,14 +355,57 @@ int main(int argc, char *argv[])
 
         npp = 0;
     }
+
     if (saveData)
     {
+        if (calSignal)
+        {
+            double tstart, tstep;
+            unsigned int nsteps;
+            sensor->GetTimeWindow(tstart, tstep, nsteps);
+            for (unsigned int i = 0; i < nsteps; i++)
+            {
+                sa = sensor->GetSignal("anode", i);
+                // sd = sensor->GetSignal("gemdown", i);
+                // su = sensor->GetSignal("gemup", i);
+                // sc = sensor->GetSignal("cathode", i);
+
+                tt_s->Fill();
+            }
+            // Exporting induced signal to a csv file
+            // sensor->ExportSignal("anode", "signle_anode");
+        }
         ff->Write();
         ff->Close();
     }
 
     printf("Average   Gain: %d / %d = %.2lf\n", ntotal, nEvents, (double)ntotal / nEvents);
     printf("Effective Gain: %d / %d = %.2lf\n", ntotaleff, nEvents, (double)ntotaleff / nEvents);
+
+    if (plotSignal)
+    {
+        ViewSignal *signalView = new ViewSignal();
+        signalView->SetSensor(sensor);
+        TCanvas *cs = new TCanvas("Signal", "", 1600, 800);
+        cs->Divide(2, 1);
+        signalView->SetCanvas((TPad *)cs->cd(1));
+        signalView->PlotSignal("anode", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(2));
+        // signalView->PlotSignal("gemdown", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(3));
+        // signalView->PlotSignal("gemup", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(4));
+        // signalView->PlotSignal("cathode", true, false, false);
+        sensor->ConvoluteSignals();
+        signalView->SetCanvas((TPad *)cs->cd(2));
+        signalView->PlotSignal("anode", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(6));
+        // signalView->PlotSignal("gemdown", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(7));
+        // signalView->PlotSignal("gemup", true, false, false);
+        // signalView->SetCanvas((TPad *)cs->cd(8));
+        // signalView->PlotSignal("cathode", true, false, false);
+    }
 
     if (plotField)
     {
@@ -386,8 +470,13 @@ int main(int argc, char *argv[])
     lt = localtime(&t);
     printf("End     time: %d/%02d/%02d %02d:%02d:%02d\n", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-    if (plotDrift || plotField)
+    if (plotDrift || plotField || plotSignal)
         app.Run(kTRUE);
+}
+double transfer(double t)
+{
+    constexpr double tau = 25.;
+    return (t / tau) * exp(1 - t / tau);
 }
 // calculate penning coefficient of the mixture gas.
 // p was the pressure (atm), gas1 (he, ne, ar), gas2 (co2, n2, ch4, ic4h10...), c was the fraction of gas2 (co2 or n2).
