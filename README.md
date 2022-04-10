@@ -1,2 +1,4 @@
 # Garfieldpp
-Some Garfield++ codes are used to simulate physics parameter of gas detector.
+用于模拟计算气体探测器的物理参数，主要是GEM探测器。
+
+程序编译方式官方已经全面转向cmake，推荐使用cmake，不过依旧提供make编译方式，需要对程序做相应调整，主要是读取的文件路径，如ansys文件，或者离子数据文件。
