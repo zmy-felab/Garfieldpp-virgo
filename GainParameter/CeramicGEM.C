@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 
     // Information of detector [cm]
     const double pitch = 0.06;
-    const double dia = 0.02;
+    // const double dia = 0.02;
     const double ceramic = 168.e-4;
     const double metal = 18.e-4;
     const double drift = 0.2;
@@ -207,11 +207,10 @@ int main(int argc, char *argv[])
     double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.;
     double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.;
     double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
-    double sa = 0., sd = 0., su = 0., sc = 0.;
     int statuse, statusi;
 
     TFile *ff;
-    TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion;
+    TTree *tt_pri, *tt_ele, *tt_ion;
     if (saveData)
     {
         rootname = rootname + "_" + mixgas + ".root";
