@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 
 #include <TApplication.h>
 #include <TFile.h>
@@ -13,9 +12,7 @@
 #include "Garfield/AvalancheMC.hh"
 #include "Garfield/ViewField.hh"
 #include "Garfield/ViewFEMesh.hh"
-#include "Garfield/ViewSignal.hh"
 #include "Garfield/Plotting.hh"
-#include "Garfield/ComponentConstant.hh"
 #include "Garfield/Random.hh"
 
 using namespace Garfield;
@@ -28,9 +25,7 @@ namespace
         cerr << " ./CeramicGEM [-n nEvents] [-p Pressure] [-t Temperature] [-v Voltage] [-d Drift] [-i Induction] [-r Rim]" << endl;
     }
 } // namespace
-double transfer(double t);
 double GetPenning(double p, string gas1, string gas2, double c2);
-
 int main(int argc, char *argv[])
 {
     if (argc > 15)
@@ -43,7 +38,7 @@ int main(int argc, char *argv[])
     int nEvents = 10;         // num
     double pressure = 1.;     // atm
     double temperature = 20.; // C
-    int voltage = 900;        // Voltage
+    int voltage = 700;        // Voltage
     double driftE = 1.;       // kV/cm
     double inductionE = 3.;   // kV/cm
     int rim = 80;             // um
@@ -117,13 +112,11 @@ int main(int argc, char *argv[])
     plottingEngine.SetDefaultStyle();
 
     const bool saveData = true;
-    const bool plotDrift = true;
-    const bool plotField = true;
-    const bool plotLine = true;
-    const bool plotMesh = true;
-    const bool driftIon = true;
-    const bool calSignal = true;
-    const bool plotSignal = true;
+    const bool plotDrift = false;
+    const bool plotField = false;
+    const bool plotLine = false;
+    const bool plotMesh = false;
+    const bool driftIon = false;
 
     // Information of detector [cm]
     const double pitch = 0.06;
@@ -139,16 +132,9 @@ int main(int argc, char *argv[])
     thgem->EnableMirrorPeriodicityX();
     thgem->EnableMirrorPeriodicityY();
     thgem->PrintRange();
-    if (calSignal)
-    {
-        thgem->SetWeightingField(string(ansysPath) + "Anode.lis", "anode");
-        // thgem->SetWeightingField(string(ansysPath) + "GEMDown.lis", "gemdown");
-        // thgem->SetWeightingField(string(ansysPath) + "GEMUp.lis", "gemup");
-        // thgem->SetWeightingField(string(ansysPath) + "Cathode.lis", "cathode");
-    }
 
     // Setup the gas.
-    string gas1 = "ar", gas2 = "co2";
+    string gas1 = "ne", gas2 = "co2";
     double f1 = 90., f2 = 10.;
     string mixgas = gas1 + "_" + to_string(int(f1)) + "_" + gas2 + "_" + to_string(int(f2));
     string gasfilePath = "./GasFile/" + mixgas + ".gas";
@@ -194,34 +180,16 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(thgem);
-    if (calSignal)
-    {
-        sensor->AddElectrode(thgem, "anode");
-        // sensor->AddElectrode(thgem, "gemdown");
-        // sensor->AddElectrode(thgem, "gemup");
-        // sensor->AddElectrode(thgem, "cathode");
-        const double tMin = -1.;
-        const double tMax = 300.;
-        const double tStep = 0.1;
-        const int nTimeBins = int((tMax - tMin) / tStep);
-        sensor->SetTimeWindow(0, tStep, nTimeBins);
-        sensor->SetTransferFunction(transfer);
-        sensor->ClearSignal();
-    }
-    sensor->SetArea(-10 * pitch, -10 * pitch, -induct - metal - ceramic / 2., 10 * pitch, 10 * pitch, drift + metal + ceramic / 2.);
+    sensor->SetArea(-5 * pitch, -5 * pitch, -induct - metal - ceramic / 2., 5 * pitch, 5 * pitch, drift + metal + ceramic / 2.);
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
-    if (calSignal)
-        aval->EnableSignalCalculation();
 
     AvalancheMC *aval_mc = nullptr;
     if (driftIon)
     {
         aval_mc = new AvalancheMC();
         aval_mc->SetSensor(sensor);
-        if (calSignal)
-            aval_mc->EnableSignalCalculation();
         aval_mc->SetDistanceSteps(2.e-4);
     }
 
@@ -233,22 +201,6 @@ int main(int argc, char *argv[])
             aval_mc->EnablePlotting(driftView);
     }
 
-    cout << "---------------------------------------------\n"
-         << "Detector Parameters\n"
-         << "Drift Region:     " << drift * 10 << "mm  Electric Field: " << driftE << "kV/cm\n"
-         << "Induction Region: " << induct * 10 << "mm  Electric Field: " << inductionE << "kV/cm\n"
-         << "GEM Voltage:      " << voltage << "V\n"
-         << "GEM Parameters:   "
-         << "Pitch    " << pitch * 10000 << "um\n"
-         << "                  Diameter " << dia * 10000 << "um\n"
-         << "                  Ceramic  " << ceramic * 10000 << "um\n"
-         << "                  Metal    " << metal * 10000 << "um\n"
-         << "                  Rim      " << rim << "um\n"
-         << "Gas:              " << gas1 << "/" << gas2 << "(" << f1 << "/" << f2 << ")\n"
-         << "Pressure:         " << pressure << "atm\n"
-         << "Temperature:      " << temperature << "C\n"
-         << "--------------------------------------------" << endl;
-
     int ne = 0, ni = 0, np = 0, npp = 0, ntotal = 0, ntotaleff = 0;
     double xe0 = 0., ye0 = 0., ze0 = 0.21, te0 = 0., ee0 = 0.1;
     double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.;
@@ -259,7 +211,7 @@ int main(int argc, char *argv[])
     int statuse, statusi;
 
     TFile *ff;
-    TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion, *tt_s;
+    TTree *tt_pri, *tt_gain, *tt_ele, *tt_ion;
     if (saveData)
     {
         rootname = rootname + "_" + mixgas + ".root";
@@ -269,13 +221,11 @@ int main(int argc, char *argv[])
         tt_pri->Branch("xe0", &xe0, "xe0/D");
         tt_pri->Branch("ye0", &ye0, "ye0/D");
         tt_pri->Branch("ze0", &ze0, "ze0/D");
-        tt_pri->AutoSave();
-        tt_gain = new TTree("gain", "Electrons avalanche");
-        tt_gain->Branch("ne", &ne, "ne/I");
-        tt_gain->Branch("ni", &ni, "ni/I");
-        tt_gain->Branch("np", &np, "np/I");
-        tt_gain->Branch("npp", &npp, "npp/I");
-        tt_gain->AutoSave();
+        tt_pri->Branch("ne", &ne, "ne/I");
+        tt_pri->Branch("ni", &ni, "ni/I");
+        tt_pri->Branch("np", &np, "np/I");
+        tt_pri->Branch("npp", &npp, "npp/I");
+        // tt_gain->AutoSave();
         tt_ele = new TTree("ele", "Electrons information");
         tt_ele->Branch("xe1", &xe1, "xe1/D");
         tt_ele->Branch("ye1", &ye1, "ye1/D");
@@ -288,7 +238,7 @@ int main(int argc, char *argv[])
         tt_ele->Branch("ee2", &ee2, "ee2/D");
         tt_ele->Branch("te2", &te2, "te2/D");
         tt_ele->Branch("statuse", &statuse, "statuse/I");
-        tt_ele->AutoSave();
+        // tt_ele->AutoSave();
 
         if (driftIon)
         {
@@ -302,16 +252,7 @@ int main(int argc, char *argv[])
             tt_ion->Branch("zi2", &zi2, "zi2/D");
             tt_ion->Branch("ti2", &ti2, "ti2/D");
             tt_ion->Branch("statusi", &statusi, "statusi/I");
-            tt_ion->AutoSave();
-        }
-        if (calSignal)
-        {
-            tt_s = new TTree("signal", "Signal information");
-            tt_s->Branch("anode", &sa, "sa/D");
-            // tt_s->Branch("GEMDown", &sd, "sd/D");
-            // tt_s->Branch("GEMUp", &su, "su/D");
-            // tt_s->Branch("Cathode", &sc, "sc/D");
-            tt_s->AutoSave();
+            // tt_ion->AutoSave();
         }
     }
     for (int i = 0; i < nEvents; i++)
@@ -320,8 +261,6 @@ int main(int argc, char *argv[])
         xe0 = -pitch / 2. + RndmUniform() * pitch;
         ye0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
         // ze0 = RndmUniformPos() * 0.2 + ceramic / 2.;
-        if (saveData)
-            tt_pri->Fill();
 
         aval->AvalancheElectron(xe0, ye0, ze0, te0, ee0, 0., 0., 0.);
         aval->GetAvalancheSize(ne, ni);
@@ -346,7 +285,7 @@ int main(int argc, char *argv[])
             }
         }
         if (saveData)
-            tt_gain->Fill();
+            tt_pri->Fill();
 
         ntotal += np;
         ntotaleff += npp;
@@ -358,54 +297,12 @@ int main(int argc, char *argv[])
 
     if (saveData)
     {
-        if (calSignal)
-        {
-            double tstart, tstep;
-            unsigned int nsteps;
-            sensor->GetTimeWindow(tstart, tstep, nsteps);
-            for (unsigned int i = 0; i < nsteps; i++)
-            {
-                sa = sensor->GetSignal("anode", i);
-                // sd = sensor->GetSignal("gemdown", i);
-                // su = sensor->GetSignal("gemup", i);
-                // sc = sensor->GetSignal("cathode", i);
-
-                tt_s->Fill();
-            }
-            // Exporting induced signal to a csv file
-            // sensor->ExportSignal("anode", "signle_anode");
-        }
         ff->Write();
         ff->Close();
     }
 
     printf("Average   Gain: %d / %d = %.2lf\n", ntotal, nEvents, (double)ntotal / nEvents);
     printf("Effective Gain: %d / %d = %.2lf\n", ntotaleff, nEvents, (double)ntotaleff / nEvents);
-
-    if (plotSignal)
-    {
-        ViewSignal *signalView = new ViewSignal();
-        signalView->SetSensor(sensor);
-        TCanvas *cs = new TCanvas("Signal", "", 1600, 800);
-        cs->Divide(2, 1);
-        signalView->SetCanvas((TPad *)cs->cd(1));
-        signalView->PlotSignal("anode", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(2));
-        // signalView->PlotSignal("gemdown", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(3));
-        // signalView->PlotSignal("gemup", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(4));
-        // signalView->PlotSignal("cathode", true, false, false);
-        sensor->ConvoluteSignals();
-        signalView->SetCanvas((TPad *)cs->cd(2));
-        signalView->PlotSignal("anode", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(6));
-        // signalView->PlotSignal("gemdown", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(7));
-        // signalView->PlotSignal("gemup", true, false, false);
-        // signalView->SetCanvas((TPad *)cs->cd(8));
-        // signalView->PlotSignal("cathode", true, false, false);
-    }
 
     if (plotField)
     {
@@ -418,17 +315,12 @@ int main(int argc, char *argv[])
         double zmax = 0.07;
         fieldView->SetArea(xmin, zmin, xmax, zmax);
         fieldView->EnableAutoRange();
-        // double vmin = 0., vmax = 0.;
-        // thgem->GetVoltageRange(vmin, vmax);
-        // fieldView->SetVoltageRange(vmin, vmax);
-        // fieldView->SetElectricFieldRange(0., 10000.);
         TCanvas *cf = new TCanvas();
         fieldView->SetCanvas(cf);
         fieldView->PlotContour(); // e v p
         // fieldView->Plot("v", "CONT1"); // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
         // fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
 
-        // master
         if (plotLine)
         {
             vector<double> xf, yf, zf;
@@ -470,13 +362,8 @@ int main(int argc, char *argv[])
     lt = localtime(&t);
     printf("End     time: %d/%02d/%02d %02d:%02d:%02d\n", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-    if (plotDrift || plotField || plotSignal)
+    if (plotDrift || plotField)
         app.Run(kTRUE);
-}
-double transfer(double t)
-{
-    constexpr double tau = 25.;
-    return (t / tau) * exp(1 - t / tau);
 }
 // calculate penning coefficient of the mixture gas.
 // p was the pressure (atm), gas1 (he, ne, ar), gas2 (co2, n2, ch4, ic4h10...), c was the fraction of gas2 (co2 or n2).
@@ -509,7 +396,7 @@ double GetPenning(double p, string gas1, string gas2, double c2)
             double a6 = 0.13235;
             double a7 = 1.47470;
 
-            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a4 * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
+            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
         }
         else if (gas2 == "n2")
         {
@@ -521,7 +408,7 @@ double GetPenning(double p, string gas1, string gas2, double c2)
             double a6 = 0.02073;
             double a7 = 0.01;
 
-            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a4 * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
+            penning = (a5 * p * p * (1 - c2) * (1 - c2) + a7 * c2 * c2 + a1 * p * c2 + a3) / (a6 * p * p * (1 - c2) * (1 - c2) + a4 * c2 * c2 + p * c2 + a2);
         }
         else
         {
