@@ -38,16 +38,14 @@ int AnaResult(string path)
             if(f->IsOpen())
             {
                 double xe0 = 0., ye0 = 0.;
+                int ne = 0, ni = 0, np = 0, npp = 0; // electron gain
                 t_pri = (TTree *)f->Get("pri");
                 t_pri->SetBranchAddress("xe0", &xe0);
                 t_pri->SetBranchAddress("ye0", &ye0);
-
-                int ne = 0, ni = 0, np = 0, npp = 0; // electron gain
-                t_gain = (TTree *)f->Get("gain");
-                // t_gain->SetBranchAddress("ne", &ne);
-                // t_gain->SetBranchAddress("ni", &ni);
-                t_gain->SetBranchAddress("np", &np);
-                // t_gain->SetBranchAddress("npp", &npp);
+                t_pri->SetBranchAddress("ne", &ne);
+                t_pri->SetBranchAddress("ni", &ni);
+                t_pri->SetBranchAddress("np", &np);
+                t_pri->SetBranchAddress("npp", &npp);
 
                 double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.; // electron information begin
                 double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.; // electron information end
@@ -74,6 +72,7 @@ int AnaResult(string path)
                 Long64_t ele_start_ceramic = 0;
                 Long64_t ele_start_copper_down = 0;
                 Long64_t ele_start_induction = 0;
+                Long64_t ele_start_readplane = 0;
 
                 Long64_t ele_end_drift = 0;
                 Long64_t ele_end_copper_up = 0;
@@ -83,16 +82,21 @@ int AnaResult(string path)
                 Long64_t ele_end_readplane = 0;
 
                 Long64_t gain_total = 0;
+                Long64_t gain_total_start = 0;
                 Long64_t gain_total_drift = 0;
                 Long64_t gain_total_gem = 0;
                 Long64_t gain_total_induction = 0;
+                Long64_t gain_total_readplane = 0;
+
                 Long64_t gain_eff = 0;
+                Long64_t gain_eff_start = 0;
                 Long64_t gain_eff_drift = 0;
                 Long64_t gain_eff_gem = 0;
                 Long64_t gain_eff_induction = 0;
+                Long64_t gain_eff_readplane = 0;
 
-                Long64_t ele_total = 0;
-                Long64_t ele_tran = 0;
+                Long64_t ele_in = 0;
+                Long64_t ele_out = 0;
 
                 for (int j = 0; j < ele_pri; j++)
                 {
@@ -107,17 +111,21 @@ int AnaResult(string path)
                     {
                         t_ele->GetEntry(ele_ava_id);
 
-                        gain_total++;
-
                         if (ze1 == 0.21)
                         {
-                            ele_total++;
-                            if (ze2 < 0.0102 && np != 1)
-                                ele_tran++;
+                            if(ze2 < 0.0102)
+                            {
+                                ele_in++;
+
+                                gain_total++;
+                                gain_total_start++;
+                            }
                         }
                         else if (ze1 < 0.21 && ze1 > 0.0102)
                         {
                             ele_start_drift++;
+
+                            gain_total++;
                             gain_total_drift++;
                         }
                         else if (ze1 <= 0.0102 && ze1 > 0.0084)
@@ -141,9 +149,12 @@ int AnaResult(string path)
                             gain_total_induction++;
                         }
                         else
-                            ;
+                        {
+                            ele_start_readplane++;
+                            gain_total_readplane++;
+                        }
 
-                        if (ze2 <= 0.21 && ze2 > 0.0102)
+                        if (ze2 < 0.21 && ze2 > 0.0102)
                             ele_end_drift++;
                         else if (ze2 <= 0.0102 && ze2 > 0.0084)
                             ele_end_copper_up++;
@@ -152,13 +163,19 @@ int AnaResult(string path)
                         else if (ze2 <= -0.0084 && ze2 > -0.0102)
                             ele_end_copper_down++;
                         else if (ze2 <= -0.0102 && ze2 > -0.2102)
+                        {
                             ele_end_induction++;
+                            ele_out++;
+                        }
                         else
                         {
                             ele_end_readplane++;
+                            ele_out++;
 
                             gain_eff++;
-                            if (ze1 < 0.21 && ze1 > 0.0102)
+                            if(ze1 == 0.21)
+                                gain_eff_start++;
+                            else if (ze1 < 0.21 && ze1 > 0.0102)
                                 gain_eff_drift++;
                             else if (ze1 <= 0.0102 && ze1 > -0.0102)
                                 gain_eff_gem++;
@@ -191,7 +208,7 @@ int AnaResult(string path)
                 data << filename[i] << "\t" << ele_start_drift << "\t" << ele_start_copper_up << "\t" << ele_start_ceramic << "\t" << ele_start_copper_down << "\t" << ele_start_induction << "\t" << ele_end_drift << "\t" << ele_end_copper_up << "\t" << ele_end_ceramic << "\t" << ele_end_copper_down << "\t" << ele_end_induction << "\t" << ele_end_readplane << endl;
                 data.close();
                 data.open("./data/transparency.txt", ios::app | ios::out);
-                data << filename[i] << "\t" << ele_total << "\t" << ele_tran << endl;
+                data << filename[i] << "\t" << ele_pri << "\t" << ele_in << endl;
                 data.close();
             }            
             f->Close();
