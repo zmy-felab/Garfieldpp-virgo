@@ -19,47 +19,18 @@
 
 using namespace Garfield;
 using namespace std;
-namespace
+double transfer(double t)
 {
-    void PrintUsage()
-    {
-        cerr << " Usage: " << endl;
-        cerr << " ./x-ray [-n nEvents] [-v Voltage]" << endl;
-    }
-} // namespace
+    constexpr double tau = 25.;
+    return (t / tau) * exp(1 - t / tau);
+}
 int main(int argc, char *argv[])
 {
-    if (argc > 5)
-    {
-        PrintUsage();
-        return 1;
-    }
-
-    // Default parameters
-    int nEvents = 10;  // num
-    int voltage = 900; // Voltage
-
-    string rootname = "./result/Information";
-
-    for (int i = 1; i < argc; i = i + 2)
-    {
-        if (string(argv[i]) == "-n")
-        {
-            nEvents = atoi(argv[i + 1]);
-            rootname += "_" + to_string(nEvents) + "Events";
-        }
-        else if (string(argv[i]) == "-v")
-        {
-            voltage = atoi(argv[i + 1]);
-            rootname += "_" + to_string(voltage) + "V";
-        }
-        else
-        {
-            PrintUsage();
-            return 1;
-        }
-    }
-    rootname += ".root";
+    constexpr bool plotField = true;
+    constexpr bool plotDrift = true;
+    constexpr bool driftIon = false;
+    constexpr bool calSignal = true;
+    constexpr bool plotSignal = true;
 
     // Start time
     time_t t;
@@ -69,16 +40,11 @@ int main(int argc, char *argv[])
     char timeRecond[255];
     sprintf(timeRecond, "Start   time: %d/%02d/%02d %02d:%02d:%02d", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-    TApplication app("app", &argc, argv);
-    plottingEngine.SetDefaultStyle();
+    int nEvents = atoi(argv[1]); // event num
 
-    const bool plotDrift = false;
-    const bool plotField = false;
-    const bool plotMesh = false;
-    const bool driftIon = false;
-    // const bool calculateSignal = false;
+    string rootname = "./result/x-ray.root";
 
-    // Information of detector [cm]
+    // information of detector [cm]
     const double pitch = 0.06;
     // const double dia = 0.02;
     const double ceramic = 168.e-4;
@@ -87,19 +53,30 @@ int main(int argc, char *argv[])
     const double induct = 0.2;
     // const double rim = 0.008;
 
-    // Load the field map.
-    const string ansysPath = "./ansys/" + to_string(voltage) + "V/";
+    TApplication app("app", &argc, argv);
+    plottingEngine.SetDefaultStyle();
+
+    // load the field map
+    const string ansysPath = "./ansys/";
     ComponentAnsys123 *thgem = new ComponentAnsys123();
     thgem->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
     thgem->EnableMirrorPeriodicityX();
     thgem->EnableMirrorPeriodicityY();
     thgem->PrintRange();
+    if (calSignal)
+    {
+        thgem->SetWeightingField(ansysPath + "ANODE.lis", "anode");
+        thgem->SetWeightingField(ansysPath + "GEMDOWN.lis", "gemdown");
+        thgem->SetWeightingField(ansysPath + "GEMUP.lis", "gemup");
+        thgem->SetWeightingField(ansysPath + "CATHODE.lis", "cathode");
+    }
 
-    // Setup the gas.
+    // setup the gas
     MediumMagboltz *gas = new MediumMagboltz();
     gas->SetComposition("ar", 90., "co2", 10.);
     gas->SetTemperature(293.15);
     gas->SetPressure(760.0);
+    gas->LoadGasFile("./GasFile/ar_90_co2_10.gas");
     gas->EnableDebugging();
     gas->Initialise();
     gas->DisableDebugging();
@@ -111,8 +88,8 @@ int main(int argc, char *argv[])
     // Load the ion mobilities.
     if (driftIon)
     {
-        const string path = getenv("GARFIELD_HOME");
-        gas->LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");
+        const string path = getenv("GARFIELD_INSTALL");
+        gas->LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
     }
 
     // Associate the gas with the corresponding field map material.
@@ -128,42 +105,121 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(thgem);
-    sensor->SetArea(-10 * pitch, -10 * pitch, -induct - metal - ceramic / 2., 10 * pitch, 42 * pitch, drift + metal + ceramic / 2.);
+    sensor->SetArea(-5 * pitch, -5 * pitch, -induct - metal - ceramic / 2., 5 * pitch, 5 * pitch, drift + metal + ceramic / 2.);
+
+    if (calSignal)
+    {
+        sensor->AddElectrode(thgem, "anode");
+        sensor->AddElectrode(thgem, "gemdown");
+        sensor->AddElectrode(thgem, "gemup");
+        sensor->AddElectrode(thgem, "cathode");
+
+        const double tMin = -1.;
+        const double tMax = 300.;
+        const double tStep = 0.1;
+        const int nTimeBins = int((tMax - tMin) / tStep);
+        sensor->SetTimeWindow(0, tStep, nTimeBins);
+        sensor->SetTransferFunction(transfer);
+    }
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
+    if (calSignal)
+        aval->EnableSignalCalculation();
 
-    AvalancheMC *aval_mc = new AvalancheMC();
-    aval_mc->SetSensor(sensor);
-    aval_mc->SetDistanceSteps(2.e-4);
-
-    // Use Heed for simulating the photon absorption
-    TrackHeed *track = new TrackHeed();
-    track->SetSensor(sensor);
-
-    ViewDrift *driftView = new ViewDrift();
-    if (plotDrift)
+    AvalancheMC *aval_mc;
+    if (driftIon)
     {
-        driftView->SetArea(-3 * pitch, -3 * pitch, -induct - metal - ceramic / 2., 3 * pitch, 3 * pitch, drift + metal + ceramic / 2.);
-        aval->EnablePlotting(driftView);
-
-        if (driftIon)
-            aval_mc->EnablePlotting(driftView);
+        aval_mc = new AvalancheMC();
+        aval_mc->SetSensor(sensor);
+        aval_mc->SetDistanceSteps(2.e-4);
+        if (calSignal)
+            aval_mc->EnableSignalCalculation();
     }
 
-    int nex = 0., nix = 0., netotal = 0., netotaleff = 0.;
+    ViewDrift *driftView;
+    ViewFEMesh *meshView = nullptr;
+    ViewField *fieldView;
+    ViewSignal *signalView;
+    TCanvas *cd, *cf, *cs;
+
+    if (plotField)
+    {
+        fieldView = new ViewField();
+        fieldView->SetComponent(thgem);
+        // Set the normal vector of the viewing plane (xz plane).
+        fieldView->SetPlane(0., -1., 0., 0., 0., 0.);
+        // Set the plot limits in the current viewing plane.
+        double xmin = -0.5 * pitch, xmax = 0.5 * pitch;
+        double zmin = -0.07, zmax = 0.07;
+        fieldView->SetArea(xmin, zmin, xmax, zmax);
+        fieldView->EnableAutoRange();
+        cf = new TCanvas("Field", "", 500, 500);
+        fieldView->SetCanvas(cf);
+        fieldView->PlotContour();
+
+        if (!meshView)
+            meshView = new ViewFEMesh();
+
+        meshView->SetComponent(thgem);
+        meshView->SetFillMesh(true);
+        meshView->SetColor(0, kYellow + 2);
+        meshView->SetColor(2, kGray);
+        meshView->SetPlane(0, -1, 0, 0, 0, 0);
+        meshView->SetArea(xmin, zmin, xmax, zmax);
+        meshView->SetCanvas(cf);
+        meshView->Plot(true);
+    }
+    if (plotDrift)
+    {
+        driftView = new ViewDrift();
+        aval->EnablePlotting(driftView);
+        if (driftIon)
+            aval_mc->EnablePlotting(driftView);
+
+        cd = new TCanvas("DriftLine", "DriftLine", 500, 500);
+
+        if (!meshView)
+            meshView = new ViewFEMesh();
+
+        meshView->SetComponent(thgem);
+        meshView->SetPlane(0, -1, 0, 0, 0, 0);
+        meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., 3 * pitch, drift + metal + ceramic / 2.);
+        meshView->SetFillMesh(true);
+        meshView->SetColor(0, kGray);
+        meshView->SetColor(2, kYellow + 2);
+        meshView->EnableAxes();
+        meshView->SetViewDrift(driftView);
+    }
+    if (calSignal)
+    {
+        signalView = new ViewSignal();
+        signalView->SetSensor(sensor);
+        if (plotSignal)
+        {
+            cs = new TCanvas("Signal", "Signal", 1000, 500);
+            cs->Divide(4, 2);
+        }
+    }
+
+    double x0 = 0, y0 = 0, z0 = 0.21, t0 = 0., e0 = 5900., dx = 0, dy = 0, dz = -1;        // x ray information
+    int nex = 0., nix = 0., netotal = 0., netotaleff = 0.;                                 // x ray
+    double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0., dx0 = 0., dy0 = 0., dz0 = 0.; // primary electron
     int ne = 0, ni = 0, np = 0, npp = 0;
-    double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0., dx0 = 0., dy0 = 0., dz0 = 0.;
-    double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.;
+    double xe1 = 0., ye1 = 0., ze1 = 0., te1 = 0., ee1 = 0.; // avalanche electron
     double xe2 = 0., ye2 = 0., ze2 = 0., te2 = 0., ee2 = 0.;
     int statuse;
-    double xi0 = 0., yi0 = 0., zi0 = 0., ti0 = 0.;
-    double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.;
+    double xi0 = 0., yi0 = 0., zi0 = 0., ti0 = 0.; // primary ion
+    double xi1 = 0., yi1 = 0., zi1 = 0., ti1 = 0.; // avalanche electron ion
     double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
     int statusi;
+    double raw_sa = 0., raw_sd = 0., raw_su = 0., raw_sc = 0.; // raw signal
+    double con_sa = 0., con_sd = 0., con_su = 0., con_sc = 0.; // convolute signal
 
     TFile *ff = new TFile(rootname.c_str(), "RECREATE");
     TTree *tt_x = new TTree("x_ray", "number of electrons and ions");
+    tt_x->Branch("x0", &x0, "x0/D");
+    tt_x->Branch("y0", &y0, "y0/D");
     tt_x->Branch("nex", &nex, "nex/I");
     tt_x->Branch("nix", &nix, "nix/I");
     tt_x->Branch("netotal", &netotal, "netotal/I");
@@ -174,7 +230,11 @@ int main(int argc, char *argv[])
     tt_pri_e->Branch("ze0", &ze0, "ze0/D");
     tt_pri_e->Branch("te0", &te0, "te0/D");
     tt_pri_e->Branch("ee0", &ee0, "ee0/D");
-    TTree *tt_ele = new TTree("ele", "Electrons information");
+    tt_pri_e->Branch("ne", &ne, "ne/I");
+    tt_pri_e->Branch("ni", &ni, "ni/I");
+    tt_pri_e->Branch("np", &np, "np/I");
+    tt_pri_e->Branch("npp", &npp, "npp/I");
+    TTree *tt_ele = new TTree("ele", "Avalanche electrons information");
     tt_ele->Branch("xe1", &xe1, "xe1/D");
     tt_ele->Branch("ye1", &ye1, "ye1/D");
     tt_ele->Branch("ze1", &ze1, "ze1/D");
@@ -186,44 +246,56 @@ int main(int argc, char *argv[])
     tt_ele->Branch("te2", &te2, "te2/D");
     tt_ele->Branch("ee2", &ee2, "ee2/D");
     tt_ele->Branch("statuse", &statuse, "statuse/I");
-    TTree *tt_pri_i = new TTree("pri_i", "Primary electrons");
-    tt_pri_i->Branch("xi0", &xi0, "xi0/D");
-    tt_pri_i->Branch("yi0", &yi0, "yi0/D");
-    tt_pri_i->Branch("zi0", &zi0, "zi0/D");
-    tt_pri_i->Branch("ti0", &ti0, "ti0/D");
-    TTree *tt_ion = new TTree("ion", "Ions information");
-    tt_ion->Branch("xi1", &xi1, "xe1/D");
-    tt_ion->Branch("yi1", &yi1, "yi1/D");
-    tt_ion->Branch("zi1", &zi1, "zi1/D");
-    tt_ion->Branch("ti1", &ti1, "ti1/D");
-    tt_ion->Branch("xi2", &xi2, "xi2/D");
-    tt_ion->Branch("yi2", &yi2, "yi2/D");
-    tt_ion->Branch("zi2", &zi2, "zi2/D");
-    tt_ion->Branch("ti2", &ti2, "ti2/D");
-    tt_ion->Branch("statusi", &statusi, "statusi/I");
-    TTree *tt_gain = new TTree("gain", "Electrons avalanche");
-    tt_gain->Branch("ne", &ne, "ne/I");
-    tt_gain->Branch("ni", &ni, "ni/I");
-    tt_gain->Branch("np", &np, "np/I");
-    tt_gain->Branch("npp", &npp, "npp/I");
+
+    TTree *tt_pri_i, *tt_ion, *tt_s;
+    if (driftIon)
+    {
+        tt_pri_i = new TTree("pri_i", "Primary ions");
+        tt_pri_i->Branch("xi0", &xi0, "xi0/D");
+        tt_pri_i->Branch("yi0", &yi0, "yi0/D");
+        tt_pri_i->Branch("zi0", &zi0, "zi0/D");
+        tt_pri_i->Branch("ti0", &ti0, "ti0/D");
+
+        tt_ion = new TTree("ion", "Ions information");
+        tt_ion->Branch("xi1", &xi1, "xe1/D");
+        tt_ion->Branch("yi1", &yi1, "yi1/D");
+        tt_ion->Branch("zi1", &zi1, "zi1/D");
+        tt_ion->Branch("ti1", &ti1, "ti1/D");
+        tt_ion->Branch("xi2", &xi2, "xi2/D");
+        tt_ion->Branch("yi2", &yi2, "yi2/D");
+        tt_ion->Branch("zi2", &zi2, "zi2/D");
+        tt_ion->Branch("ti2", &ti2, "ti2/D");
+        tt_ion->Branch("statusi", &statusi, "statusi/I");
+    }
+    if (calSignal)
+    {
+        tt_s = new TTree("signal", "Signal information");
+        tt_s->Branch("AnodeRaw", &raw_sa, "raw_sa/D");
+        tt_s->Branch("GEMDownRaw", &raw_sd, "raw_sd/D");
+        tt_s->Branch("GEMUpRaw", &raw_su, "raw_su/D");
+        tt_s->Branch("CathodeRaw", &raw_sc, "raw_sc/D");
+        tt_s->Branch("AnodeCon", &con_sa, "con_sa/D");
+        tt_s->Branch("GEMDownCon", &con_sd, "con_sd/D");
+        tt_s->Branch("GEMUpCon", &con_su, "con_su/D");
+        tt_s->Branch("CathodeCon", &con_sc, "con_sc/D");
+    }
+
+    // use Heed for simulating the photon absorption
+    TrackHeed *track = new TrackHeed();
+    track->SetSensor(sensor);
 
     for (int i = 0; i < nEvents; i++)
     {
         printf("----> Event %d/%d Start:\n", i, nEvents);
+        if (calSignal)
+            sensor->ClearSignal();
 
         // Randomize the initial position.
-        const double x0 = 0.;
-        const double y0 = 0.;
-        const double z0 = drift + metal + ceramic / 2.;
-        const double t0 = 0.;
-        // Sample the x ray energy, using the relative intensities according to XDB.
-        const double e0 = 5900.; // eV
-        // const double r = 167. * RndmUniform();
-        // const double e0 = r < 100. ? 5898.8 : r < 150. ? 5887.6 : 6490.4;
-
+        x0 = -pitch / 2. + RndmUniform() * pitch;
+        y0 = -sqrt(3) * pitch / 2. + RndmUniform() * sqrt(3) * pitch;
         while (1)
         {
-            track->TransportPhoton(x0, y0, z0, t0, e0, 0., 0., -1, nex, nix);
+            track->TransportPhoton(x0, y0, z0, t0, e0, dx, dy, dz, nex, nix);
             if (nex != 0)
             {
                 track->GetElectron(0, xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
@@ -236,15 +308,15 @@ int main(int argc, char *argv[])
             // primary ions
             for (int j = 0; j < nix; j++)
             {
-                track->GetIon(i, xi0, yi0, zi0, ti0);
+                track->GetIon(j, xi0, yi0, zi0, ti0);
                 aval_mc->DriftIon(xi0, yi0, zi0, ti0);
+                // aval_mc->GetIonEndpoint(0,);
                 tt_pri_i->Fill();
             }
         }
         for (int j = 0; j < nex; j++)
         {
             track->GetElectron(j, xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
-            tt_pri_e->Fill();
 
             // aval->DriftElectron(xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
             aval->AvalancheElectron(xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
@@ -257,7 +329,7 @@ int main(int argc, char *argv[])
                 aval->GetElectronEndpoint(k, xe1, ye1, ze1, te1, ee1, xe2, ye2, ze2, te2, ee2, statuse);
                 tt_ele->Fill();
 
-                if (ze2 <= -induct - metal - ceramic / 2.)
+                if (ze2 <= -induct)
                     npp++;
 
                 if (driftIon)
@@ -268,64 +340,95 @@ int main(int argc, char *argv[])
                     tt_ion->Fill();
                 }
             }
-            tt_gain->Fill();
+            tt_pri_e->Fill();
 
             netotal += np;
             netotaleff += npp;
 
             // print information of the primary electrons avalanche
-            printf("Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d %10d %10d\n", j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp, netotal, netotaleff);
+            printf("Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
             npp = 0;
         }
 
         tt_x->Fill();
 
+        printf("Event %d Primary position: %10.1lfum %10.1lfum\n", i, x0 * 10000, y0 * 10000);
         printf("Event %d Average    Gain: %d / %d = %.2lf\n", i, netotal, nex, (double)netotal / nex);
         printf("Event %d Efficiency Gain: %d / %d = %.2lf\n", i, netotaleff, nex, (double)netotaleff / nex);
 
         // Reset
         netotal = 0;
         netotaleff = 0;
+
+        if (calSignal)
+        {
+            double tstart, tstep;
+            unsigned int nsteps;
+            sensor->GetTimeWindow(tstart, tstep, nsteps);
+            for (unsigned int j = 0; j < nsteps; j++)
+            {
+                raw_sa = sensor->GetSignal("anode", j);
+                raw_sd = sensor->GetSignal("gemdown", j);
+                raw_su = sensor->GetSignal("gemup", j);
+                raw_sc = sensor->GetSignal("cathode", j);
+            }
+            // Exporting induced signal to a csv file
+            char name[50];
+            sprintf(name, "./result/signal_anode_raw_%d", i);
+            sensor->ExportSignal("anode", name);
+
+            if (plotSignal)
+            {
+                cs->Clear("D");
+                signalView->SetCanvas((TPad *)cs->cd(1));
+                signalView->PlotSignal("anode", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(2));
+                signalView->PlotSignal("gemdown", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(3));
+                signalView->PlotSignal("gemup", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(4));
+                signalView->PlotSignal("cathode", true, false, false);
+            }
+            sensor->ConvoluteSignals();
+            for (unsigned int j = 0; j < nsteps; j++)
+            {
+                con_sa = sensor->GetSignal("anode", j);
+                con_sd = sensor->GetSignal("gemdown", j);
+                con_su = sensor->GetSignal("gemup", j);
+                con_sc = sensor->GetSignal("cathode", j);
+            }
+            // Exporting induced signal to a csv file
+            sprintf(name, "./result/signal_anode_con_%d", i);
+            sensor->ExportSignal("anode", name);
+
+            if (plotSignal)
+            {
+                signalView->SetCanvas((TPad *)cs->cd(5));
+                signalView->PlotSignal("anode", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(6));
+                signalView->PlotSignal("gemdown", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(7));
+                signalView->PlotSignal("gemup", true, false, false);
+                signalView->SetCanvas((TPad *)cs->cd(8));
+                signalView->PlotSignal("cathode", true, false, false);
+
+                sprintf(name, "./result/signal_%d.pdf", i);
+                cs->SaveAs(name);
+            }
+            tt_s->Fill();
+        }
+        if (plotDrift)
+        {
+            cd->Clear();
+            meshView->SetCanvas(cd);
+            meshView->Plot();
+            char name[50];
+            sprintf(name, "./result/driftline_%d.pdf", i);
+            cd->SaveAs(name);
+        }
     }
     ff->Write();
     ff->Close();
-
-    if (plotDrift)
-    {
-        TCanvas *cd = new TCanvas();
-        driftView->SetCanvas(cd);
-        driftView->Plot();
-    }
-    if (plotField)
-    {
-        ViewField *fieldView = new ViewField();
-        fieldView->SetComponent(thgem);
-        fieldView->SetPlane(0., -1., 0., 0., 0., 0.);
-        fieldView->SetArea(-3 * pitch / 2., -0.1, 3 * pitch / 2., 0.1);
-        double vmin = 0., vmax = 0.;
-        thgem->GetVoltageRange(vmin, vmax);
-        fieldView->SetVoltageRange(vmin, vmax);
-        // fieldView->SetElectricFieldRange(0., 10000.);
-        TCanvas *cf = new TCanvas();
-        fieldView->SetCanvas(cf);
-        fieldView->PlotContour(); // e v p
-        // fieldView->Plot("v", "CONT1");                            // e v p; SCAT Box ARR COLZ TEXT CONT4Z CONT1 CONT2 CONT3
-        // fieldView->PlotProfile(0., 0., -0.21, 0., 0., 0.41, "e"); // e v p
-    }
-    if (plotMesh)
-    {
-        ViewFEMesh *meshView = new ViewFEMesh();
-        meshView->SetComponent(thgem);
-        meshView->SetPlane(0, -1, 0, 0, 0, 0);
-        meshView->SetViewDrift(driftView);
-        meshView->SetArea(-3 * pitch, -induct - metal - ceramic / 2., -3 * pitch, 3 * pitch, drift + metal + ceramic / 2., 3 * pitch);
-        meshView->SetFillMesh(false);
-        meshView->EnableAxes();
-        meshView->SetYaxisTitle("z");
-        TCanvas *cm = new TCanvas();
-        meshView->SetCanvas(cm);
-        meshView->Plot();
-    }
 
     // Print start and end time
     printf("%s\n", timeRecond);
@@ -333,6 +436,6 @@ int main(int argc, char *argv[])
     lt = localtime(&t);
     printf("End     time: %d/%02d/%02d %02d:%02d:%02d\n", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
-    if (plotDrift || plotField || plotMesh)
+    if (plotDrift || plotField || plotSignal)
         app.Run(kTRUE);
 }
