@@ -289,6 +289,8 @@ int main(int argc, char *argv[])
         printf("----> Event %d/%d Start:\n", i, nEvents);
         if (calSignal)
             sensor->ClearSignal();
+        if (plotDrift)
+            driftView->Clear();
 
         // Randomize the initial position.
         x0 = -pitch / 2. + RndmUniform() * pitch;
