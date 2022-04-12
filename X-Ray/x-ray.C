@@ -136,6 +136,9 @@ int main(int argc, char *argv[])
         if (calSignal)
             aval_mc->EnableSignalCalculation();
     }
+    // use Heed for simulating the photon absorption
+    TrackHeed *track = new TrackHeed();
+    track->SetSensor(sensor);
 
     ViewDrift *driftView;
     ViewFEMesh *meshView = nullptr;
@@ -156,7 +159,8 @@ int main(int argc, char *argv[])
         fieldView->EnableAutoRange();
         cf = new TCanvas("Field", "", 500, 500);
         fieldView->SetCanvas(cf);
-        fieldView->PlotContour();
+        // fieldView->PlotContour();
+        fieldView->Plot("v", "CONT4Z");
 
         if (!meshView)
             meshView = new ViewFEMesh();
@@ -174,6 +178,7 @@ int main(int argc, char *argv[])
     {
         driftView = new ViewDrift();
         aval->EnablePlotting(driftView);
+        track->EnablePlotting(driftView);
         if (driftIon)
             aval_mc->EnablePlotting(driftView);
 
@@ -197,7 +202,7 @@ int main(int argc, char *argv[])
         signalView->SetSensor(sensor);
         if (plotSignal)
         {
-            cs = new TCanvas("Signal", "Signal", 1000, 500);
+            cs = new TCanvas("Signal", "Signal", 1200, 600);
             cs->Divide(4, 2);
         }
     }
@@ -279,10 +284,6 @@ int main(int argc, char *argv[])
         tt_s->Branch("GEMUpCon", &con_su, "con_su/D");
         tt_s->Branch("CathodeCon", &con_sc, "con_sc/D");
     }
-
-    // use Heed for simulating the photon absorption
-    TrackHeed *track = new TrackHeed();
-    track->SetSensor(sensor);
 
     for (int i = 0; i < nEvents; i++)
     {
