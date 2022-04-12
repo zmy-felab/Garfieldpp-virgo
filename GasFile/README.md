@@ -1,5 +1,5 @@
 # 气体特性模拟
-
+最新版本可以通过`MediumMagboltz`类中的相应的`Get`函数得到气体参数值。
 ## 模拟物理参数
 - 漂移速度 (Drift Velocity)
 - 横向扩散、纵向扩散 (Diffusion Coefficient)
