@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
         //
         if (plotDrift)
         {
-            // cD->Clear();
+            cD->Clear();
             cellView->Plot2d();
             constexpr bool twod = true;
             constexpr bool drawaxis = false;
