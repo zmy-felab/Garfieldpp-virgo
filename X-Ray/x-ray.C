@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <omp.h>
 
 #include <TApplication.h>
 #include <TFile.h>
@@ -42,8 +43,6 @@ int main(int argc, char *argv[])
 
     int nEvents = atoi(argv[1]); // event num
 
-    string rootname = "./result/x-ray.root";
-
     // information of detector [cm]
     const double pitch = 0.06;
     // const double dia = 0.02;
@@ -57,7 +56,7 @@ int main(int argc, char *argv[])
     plottingEngine.SetDefaultStyle();
 
     // load the field map
-    const string ansysPath = "./ansys/";
+    const string ansysPath = "../ansys/";
     ComponentAnsys123 *thgem = new ComponentAnsys123();
     thgem->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
     thgem->EnableMirrorPeriodicityX();
@@ -221,7 +220,7 @@ int main(int argc, char *argv[])
     double raw_sa = 0., raw_sd = 0., raw_su = 0., raw_sc = 0.; // raw signal
     double con_sa = 0., con_sd = 0., con_su = 0., con_sc = 0.; // convolute signal
 
-    TFile *ff = new TFile(rootname.c_str(), "RECREATE");
+    TFile *ff = new TFile("../result/x-ray.root", "RECREATE");
     TTree *tt_x = new TTree("x_ray", "number of electrons and ions");
     tt_x->Branch("x0", &x0, "x0/D");
     tt_x->Branch("y0", &y0, "y0/D");
@@ -255,12 +254,6 @@ int main(int argc, char *argv[])
     TTree *tt_pri_i, *tt_ion, *tt_s;
     if (driftIon)
     {
-        tt_pri_i = new TTree("pri_i", "Primary ions");
-        tt_pri_i->Branch("xi0", &xi0, "xi0/D");
-        tt_pri_i->Branch("yi0", &yi0, "yi0/D");
-        tt_pri_i->Branch("zi0", &zi0, "zi0/D");
-        tt_pri_i->Branch("ti0", &ti0, "ti0/D");
-
         tt_ion = new TTree("ion", "Ions information");
         tt_ion->Branch("xi1", &xi1, "xe1/D");
         tt_ion->Branch("yi1", &yi1, "yi1/D");
@@ -313,10 +306,12 @@ int main(int argc, char *argv[])
             {
                 track->GetIon(j, xi0, yi0, zi0, ti0);
                 aval_mc->DriftIon(xi0, yi0, zi0, ti0);
-                // aval_mc->GetIonEndpoint(0,);
-                tt_pri_i->Fill();
+                aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, statusi);
+                tt_ion->Fill();
+                printf("Thread: %d Ion: %d/%d: %10.1lfum %10.1lfum %10.1fum\n", omp_get_thread_num(), j, nix, xi0 * 10000, yi0 * 10000, zi0 * 10000);
             }
         }
+        #pragma omp parallel for num_threads(atoi(argv[2])) reduction(+:netotal,netotaleff)
         for (int j = 0; j < nex; j++)
         {
             track->GetElectron(j, xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
@@ -349,7 +344,7 @@ int main(int argc, char *argv[])
             netotaleff += npp;
 
             // print information of the primary electrons avalanche
-            printf("Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
+            printf("Thread: %d Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", omp_get_thread_num(), j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
             npp = 0;
         }
 
@@ -415,7 +410,7 @@ int main(int argc, char *argv[])
                 signalView->SetCanvas((TPad *)cs->cd(8));
                 signalView->PlotSignal("cathode", true, false, false);
 
-                sprintf(name, "./result/signal_%d.pdf", i);
+                sprintf(name, "../result/signal_%d.pdf", i);
                 cs->SaveAs(name);
             }
             tt_s->Fill();
@@ -426,7 +421,7 @@ int main(int argc, char *argv[])
             meshView->SetCanvas(cd);
             meshView->Plot();
             char name[50];
-            sprintf(name, "./result/driftline_%d.pdf", i);
+            sprintf(name, "../result/driftline_%d.pdf", i);
             cd->SaveAs(name);
         }
     }
