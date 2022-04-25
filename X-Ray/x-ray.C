@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
         printf("----> Event %d/%d Start:\n", i, nEvents);
 
         // Reset
-        ne = 0; ni = 0; np = 0; npp = 0;
+        ne = 0; ni = 0; np = 0;
         netotal = 0; netotaleff = 0;
 
         if (calSignal)
@@ -320,6 +320,8 @@ int main(int argc, char *argv[])
         // 并行过程中AvalancheElectron()函数会导致corrupted size vs. prev_size while consolidating错误
         for (int j = 0; j < nex; j++)
         {
+            npp = 0; // reset npp
+
             track->GetElectron(j, xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
 
             // aval->DriftElectron(xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
