@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <omp.h>
+// #include <omp.h>
 
 #include <TApplication.h>
 #include <TFile.h>
@@ -281,6 +281,11 @@ int main(int argc, char *argv[])
     for (int i = 0; i < nEvents; i++)
     {
         printf("----> Event %d/%d Start:\n", i, nEvents);
+
+        // Reset
+        ne = 0; ni = 0; np = 0; npp = 0;
+        netotal = 0; netotaleff = 0;
+
         if (calSignal)
             sensor->ClearSignal();
         if (plotDrift)
@@ -308,10 +313,11 @@ int main(int argc, char *argv[])
                 aval_mc->DriftIon(xi0, yi0, zi0, ti0);
                 aval_mc->GetIonEndpoint(0, xi1, yi1, zi1, ti1, xi2, yi2, zi2, ti2, statusi);
                 tt_ion->Fill();
-                printf("Thread: %d Ion: %d/%d: %10.1lfum %10.1lfum %10.1fum\n", omp_get_thread_num(), j, nix, xi0 * 10000, yi0 * 10000, zi0 * 10000);
+                // printf("Thread: %d Ion: %d/%d: %10.1lfum %10.1lfum %10.1fum\n", omp_get_thread_num(), j, nix, xi0 * 10000, yi0 * 10000, zi0 * 10000);
             }
         }
-        #pragma omp parallel for num_threads(atoi(argv[2])) reduction(+:netotal,netotaleff)
+        // #pragma omp parallel for num_threads(atoi(argv[2])) reduction(+:netotal,netotaleff)
+        // 并行过程中AvalancheElectron()函数会导致corrupted size vs. prev_size while consolidating错误
         for (int j = 0; j < nex; j++)
         {
             track->GetElectron(j, xe0, ye0, ze0, te0, ee0, dx0, dy0, dz0);
@@ -344,8 +350,8 @@ int main(int argc, char *argv[])
             netotaleff += npp;
 
             // print information of the primary electrons avalanche
-            printf("Thread: %d Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", omp_get_thread_num(), j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
-            npp = 0;
+            // printf("Thread: %d Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", omp_get_thread_num(), j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
+            printf("Ele: %d/%d: %10.1lfum %10.1lfum %10.1fum %6d %6d %6d %6d\n", j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np, npp);
         }
 
         tt_x->Fill();
@@ -353,10 +359,6 @@ int main(int argc, char *argv[])
         printf("Event %d Primary position: %10.1lfum %10.1lfum\n", i, x0 * 10000, y0 * 10000);
         printf("Event %d Average    Gain: %d / %d = %.2lf\n", i, netotal, nex, (double)netotal / nex);
         printf("Event %d Efficiency Gain: %d / %d = %.2lf\n", i, netotaleff, nex, (double)netotaleff / nex);
-
-        // Reset
-        netotal = 0;
-        netotaleff = 0;
 
         if (calSignal)
         {
