@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     gas->SetComposition("ar", 90., "co2", 10.);
     gas->SetTemperature(293.15);
     gas->SetPressure(760.0);
-    gas->LoadGasFile("./GasFile/ar_90_co2_10.gas");
+    gas->LoadGasFile("../GasFile/ar_90_co2_10.gas");
     gas->EnableDebugging();
     gas->Initialise();
     gas->DisableDebugging();
@@ -376,20 +376,20 @@ int main(int argc, char *argv[])
             }
             // Exporting induced signal to a csv file
             char name[50];
-            sprintf(name, "./result/signal_anode_raw_%d", i);
+            sprintf(name, "../result/signal_anode_raw_%d", i);
             sensor->ExportSignal("anode", name);
 
             if (plotSignal)
             {
                 cs->Clear("D");
                 signalView->SetCanvas((TPad *)cs->cd(1));
-                signalView->PlotSignal("anode", true, false, false);
+                signalView->PlotSignal("anode", "t");
                 signalView->SetCanvas((TPad *)cs->cd(2));
-                signalView->PlotSignal("gemdown", true, false, false);
+                signalView->PlotSignal("gemdown", "t");
                 signalView->SetCanvas((TPad *)cs->cd(3));
-                signalView->PlotSignal("gemup", true, false, false);
+                signalView->PlotSignal("gemup", "t");
                 signalView->SetCanvas((TPad *)cs->cd(4));
-                signalView->PlotSignal("cathode", true, false, false);
+                signalView->PlotSignal("cathode", "t");
             }
             sensor->ConvoluteSignals();
             for (unsigned int j = 0; j < nsteps; j++)
@@ -400,19 +400,19 @@ int main(int argc, char *argv[])
                 con_sc = sensor->GetSignal("cathode", j);
             }
             // Exporting induced signal to a csv file
-            sprintf(name, "./result/signal_anode_con_%d", i);
+            sprintf(name, "../result/signal_anode_con_%d", i);
             sensor->ExportSignal("anode", name);
 
             if (plotSignal)
             {
                 signalView->SetCanvas((TPad *)cs->cd(5));
-                signalView->PlotSignal("anode", true, false, false);
+                signalView->PlotSignal("anode", "t");
                 signalView->SetCanvas((TPad *)cs->cd(6));
-                signalView->PlotSignal("gemdown", true, false, false);
+                signalView->PlotSignal("gemdown", "t");
                 signalView->SetCanvas((TPad *)cs->cd(7));
-                signalView->PlotSignal("gemup", true, false, false);
+                signalView->PlotSignal("gemup", "t");
                 signalView->SetCanvas((TPad *)cs->cd(8));
-                signalView->PlotSignal("cathode", true, false, false);
+                signalView->PlotSignal("cathode", "t");
 
                 sprintf(name, "../result/signal_%d.pdf", i);
                 cs->SaveAs(name);
