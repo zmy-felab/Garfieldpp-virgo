@@ -271,11 +271,11 @@ int main(int argc, char *argv[])
         {
             cS->Clear("D");
             signalView->SetCanvas((TPad *)cS->cd(1));
-            signalView->PlotSignal("s", true, false, false);
+            signalView->PlotSignal("s", "t");
             signalView->SetCanvas((TPad *)cS->cd(2));
-            signalView->PlotSignal("s", false, true, false);
+            signalView->PlotSignal("s", "e");
             signalView->SetCanvas((TPad *)cS->cd(3));
-            signalView->PlotSignal("s", false, false, true);
+            signalView->PlotSignal("s", "i");
         }
         //
         sensor->ConvoluteSignals();
@@ -293,11 +293,11 @@ int main(int argc, char *argv[])
         if (plotSignal)
         {
             signalView->SetCanvas((TPad *)cS->cd(4));
-            signalView->PlotSignal("s", true, false, false);
+            signalView->PlotSignal("s", "t");
             signalView->SetCanvas((TPad *)cS->cd(5));
-            signalView->PlotSignal("s", false, true, false);
+            signalView->PlotSignal("s", "e");
             signalView->SetCanvas((TPad *)cS->cd(6));
-            signalView->PlotSignal("s", false, false, true);
+            signalView->PlotSignal("s", "i");
         }
         tt_x->Fill();
     }
