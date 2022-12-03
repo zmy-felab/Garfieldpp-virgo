@@ -47,5 +47,5 @@ do
     done
 done
 
-# Prevent the process killed. 园区服务器需要这一行
+# Prevent the process killed. CSNS园区服务器需要这一行
 # wait
