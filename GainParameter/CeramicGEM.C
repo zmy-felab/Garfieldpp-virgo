@@ -155,16 +155,16 @@ int main(int argc, char *argv[])
     if (driftIon)
     {
         if (gas1 == "he")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_He+_He.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_INSTALL")) + "/share/Garfield/Data/IonMobility_He+_He.txt");
         else if (gas1 == "ne")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_Ne+_Ne.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_INSTALL")) + "/share/Garfield/Data/IonMobility_Ne+_Ne.txt");
         else if (gas1 == "ar")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_INSTALL")) + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
         else
             cout << "Please set correct nobe gas." << endl;
 
         if (gas2 == "co2")
-            gas->LoadIonMobility(string(getenv("GARFIELD_HOME")) + "/share/Garfield/Data/IonMobility_CO2+_CO2.txt");
+            gas->LoadIonMobility(string(getenv("GARFIELD_INSTALL")) + "/share/Garfield/Data/IonMobility_CO2+_CO2.txt");
     }
 
     // Associate the gas with the corresponding field map material.
