@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     gas->DisableDebugging();
     // gas->PrintGas();
     // Set the Penning transfer efficiency.
-    const double rPenning = 0.57;
+    const double rPenning = 0.426;
     const double lambdaPenning = 0.;
     gas->EnablePenningTransfer(rPenning, lambdaPenning, "ar");
 
