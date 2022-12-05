@@ -1,0 +1,132 @@
+FINISH
+
+/CLEAR, START
+
+/FILNAM, StarTube, 1
+/TITLE, Star Tube
+
+/PREP7  
+! no polynomial elements
+/PMETH, OFF, 1
+
+! set electric preferences
+KEYW, PR_ELMAG, 1
+KEYW, MAGELC, 1   
+
+! select element
+ET, 1, SOLID123
+
+! material properties
+MP, PERX, 1, 1e10           ! metal
+MP, RSVX, 1, 0              !
+MP, PERX, 2, 1	            ! gas
+
+! geometry
+zLength = 5                 ! tube length, unit: mm
+tubeR = 25.4/8              ! tube diameter
+tubeWallR = tubeR+0.3       ! tube wall thickness
+wireR = 0.1/2               ! wire radius
+starX = tubeR/2             ! star length
+starXPos = tubeR-0.5*starX  ! star center coordinate
+starY = 0.1                 ! star thichness
+starN = 6                   ! star number
+
+! voltage
+ground = 0                  ! unit = V
+anode = 500.                ! 
+
+CYLIND, tubeR, tubeWallR, -zLength/2, zLength/2, 0., 360.  ! tube wall -> #1
+
+! star -> #2~#starN+1
+*DO,I,0,starN-1
+    WPROTA, 360/StarN*I, 0, 0
+    WPOFFS, starXPos, 0, 0
+    BLOCK, -starX/2, starX/2, -starY/2, starY/2, -zLength/2, zLength/2
+    WPOFFS, -starXPos, 0, 0
+    WPROTA, -360/StarN*I, 0, 0
+*ENDDO
+
+VADD, ALL                                                  ! tube wall + star -> #starN+2
+
+CYLIND, wireR, , -zLength/2, zLength/2, 0., 360.           ! anode wire -> #1
+CYLIND, wireR, tubeR, -zLength/2, zLength/2, 0., 360.      ! gas -> #2
+
+VSBV, 2, starN+2, , , KEEP                                 ! gas -> #3
+
+! glueing all volumes
+VGLUE, ALL                                                 ! wire -> #1, gas -> #2, tube wall + star -> #4
+
+! assign material attributes
+VSEL, S, VOLU, , 1    ! #1 -> wire  
+VATT, 1, , 1
+VSEL, S, VOLU, , 2    ! #2 -> gas
+VATT, 2, , 1
+VSEL, S, VOLU, , 4    ! #4 -> tube wall + star
+VATT, 1, , 1
+
+! voltage boundary conditions
+VSEL, S, VOLU, , 1    ! #1 -> wire
+ASLV, S
+DA, ALL, VOLT, anode
+VSEL, S, VOLU, , 4    ! #4 -> tube wall + star
+ASLV, S
+DA, ALL, VOLT, ground
+
+! meshing options
+MSHKEY, 0             ! use free meshing (the default).
+SMRT, 9               ! from 1 (fine mesh) to 10 (coarse mesh) 
+VSEL, S, VOLU, , 2    ! #2 -> gas
+ASLV, S
+VMESH, 2
+ 
+! find the solution
+/SOLU
+SOLVE
+
+! display the solution
+/POST1
+/EFACET, 1
+/CONTOUR, 1, 100, AUTO, ,
+PLNSOL, VOLT, , 0
+
+! solution to output files for Garfield
+/OUTPUT, PRNSOL, lis
+PRNSOL
+/OUTPUT
+
+/OUTPUT, NLIST, lis
+NLIST,,,,COORD
+/OUTPUT
+
+/OUTPUT,ELIST, lis
+ELIST
+/OUTPUT
+
+/OUTPUT, MPLIST, lis
+MPLIST
+/OUTPUT
+
+! weight Field for Anode
+/SOLU
+LSCLEAR, ALL
+
+! set the potential of anode to 1V, the other to 0V
+VSEL, S, VOLU, , 1    ! #1 -> wire
+ASLV, S
+DA, ALL, VOLT, 1
+VSEL, S, VOLU, , 4    ! #4 -> tube wall + star
+ASLV, S
+DA, ALL, VOLT, ground
+
+! select
+VSEL, S, VOLU, , 2
+ASLV, S
+
+! solve the field
+SOLVE
+
+! write the solution
+/POST1
+/OUTPUT, ANODE, lis
+PRNSOL
+/OUTPUT
