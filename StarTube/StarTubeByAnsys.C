@@ -26,8 +26,28 @@ double transfer(double t)
     constexpr double tau = 25.;
     return (t / tau) * exp(1 - t / tau);
 }
-void DrawDetector(double tubeR, double wireR, double starX, int starN);
-
+void DrawDetector(double tubeR, double wireR, double starX, int starN)
+{
+    TEllipse *cir = new TEllipse(0, 0, tubeR);
+    TEllipse *wire = new TEllipse(0, 0, wireR);
+    cir->SetFillStyle(0);
+    cir->SetLineWidth(2);
+    cir->Draw();
+    wire->SetFillColor(kBlack);
+    wire->Draw();
+    TLine *line[starN];
+    for (int i = 0; i < starN; i++)
+    {
+        double x1 = (tubeR - starX) * cos(2 * Pi / starN * i);
+        double y1 = (tubeR - starX) * sin(2 * Pi / starN * i);
+        double x2 = tubeR * cos(2 * Pi / starN * i);
+        double y2 = tubeR * sin(2 * Pi / starN * i);
+        line[i] = new TLine(x1, y1, x2, y2);
+        line[i]->SetLineColor(kBlack);
+        line[i]->SetLineWidth(2);
+        line[i]->Draw();
+    }
+}
 int main(int argc, char *argv[])
 {
     constexpr bool plotField = true;
@@ -47,6 +67,7 @@ int main(int argc, char *argv[])
 
     // information of detector [cm]
     const double zLength = 0.01;
+    const int zPeriod = 1000;
     const double tubeR = 2.54 / 2;
     // const double tubeWallR = tubeR + 0.03;
     const double wireR = 0.01 / 2;
@@ -70,7 +91,7 @@ int main(int argc, char *argv[])
     gas->SetComposition("ar", 90., "co2", 10.);
     gas->SetTemperature(293.15);
     gas->SetPressure(760.0);
-    gas->LoadGasFile("../gasFile/ar_90.0_co2_10.0_1.0atm.gas");
+    gas->LoadGasFile("./gasFile/ar_90.0_co2_10.0_1.0atm.gas");
     gas->EnableDebugging();
     gas->Initialise();
     gas->DisableDebugging();
@@ -99,7 +120,7 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(tube);
-    sensor->SetArea(-tubeR, -tubeR, -zLength * 100, tubeR, tubeR, zLength * 100);
+    sensor->SetArea(-tubeR, -tubeR, -zLength * zPeriod / 2., tubeR, tubeR, zLength * zPeriod / 2.);
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
@@ -145,15 +166,15 @@ int main(int argc, char *argv[])
 
         cd = new TCanvas("DriftLine", "DriftLine", 500, 500);
         driftView->SetCanvas(cd);
-        driftView->SetArea(-tubeR - 0.1, -tubeR - 0.1, -zLength * 100 - 0.1, tubeR + 0.1, tubeR + 0.1, zLength * 100);
+        driftView->SetArea(-tubeR - 0.1, -tubeR - 0.1, -zLength * zPeriod / 2, tubeR + 0.1, tubeR + 0.1, zLength * zPeriod / 2);
     }
     if (plotSignal)
     {
         tube->SetWeightingField(ansysPath + "ANODE.lis", "anode");
 
         const double tMin = -1.;
-        const double tMax = 300.;
-        const double tStep = 0.2;
+        const double tMax = 2000.;
+        const double tStep = 1;
         const int nTimeBins = int((tMax - tMin) / tStep);
         sensor->AddElectrode(tube, "anode");
         sensor->SetTimeWindow(0, tStep, nTimeBins);
@@ -173,7 +194,7 @@ int main(int argc, char *argv[])
         cs->Divide(2, 1);
     }
 
-    double x0 = 0, y0 = 0, z0 = 0.5, t0 = 0., e0 = 5900., dx = 0, dy = 0, dz = -1; // x ray information
+    double x0 = 0, y0 = 0, z0 = 1., t0 = 0., e0 = 5900., dx = 0, dy = 0, dz = -1; // x ray information
     int nex = 0, nix = 0, netotal = 0;
     double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0., dx0 = 0., dy0 = 0., dz0 = 0.; // primary electron
     int ne = 0, ni = 0, np = 0;
@@ -242,18 +263,16 @@ int main(int argc, char *argv[])
             driftView->Clear();
 
         // Randomize the initial position.
-        // while (1)
-        // {
-        //     x0 = -tubeR / 2. + RndmUniform() * tubeR;
-        //     y0 = -tubeR / 2. + RndmUniform() * tubeR;
+        while (1)
+        {
+            x0 = -tubeR / 2. + RndmUniform() * tubeR;
+            y0 = -tubeR / 2. + RndmUniform() * tubeR;
 
-        //     double r = sqrt(x0 * x0 + y0 * y0);
-        //     if (r > wireR && r < (tubeR - starX))
-        //         break;
-        // }
-
-        x0 = tubeR * 0.5;
-        y0 = tubeR * 0.5;
+            double r = sqrt(x0 * x0 + y0 * y0);
+            if (r < tubeR && r > (tubeR - starX))
+                if (tube->GetMedium(x0, y0, z0)->GetName() == "Ar/CO2")
+                    break;
+        }
 
         while (1)
         {
@@ -309,12 +328,12 @@ int main(int argc, char *argv[])
             netotal += np;
 
             // print information of the primary electrons avalanche
-            printf("Ele: %d/%d: %8.1lfum %8.1lfum %8.1fum %5d %5d %5d\n", j, nex, xe0 * 10000, ye0 * 10000, ze0 * 10000, ni, ne, np);
+            printf("Ele: %d/%d: %8.2lfmm %8.2lfmm %8.2fmm %5d %5d %5d\n", j, nex, xe0 * 10, ye0 * 10, ze0 * 10, ni, ne, np);
         }
 
         tt_x->Fill();
 
-        printf("Event %d Primary position: %8.1lfum %8.1lfum\n", i, x0 * 10000, y0 * 10000);
+        printf("Event %d Primary position: %8.2lfmm %8.2lfmm\n", i, x0 * 10, y0 * 10);
         printf("Event %d Average     Gain: %d / %d = %.2lf\n", i, netotal, nex, (double)netotal / nex);
 
         if (plotSignal)
@@ -322,7 +341,7 @@ int main(int argc, char *argv[])
 
             cs->Clear("D");
             signalView->SetCanvas((TPad *)cs->cd(1));
-            // signalView->PlotSignal("anode", "t");
+            signalView->PlotSignal("anode", "t");
             signalView->PlotSignal("anode", "e");
             if (driftIon)
                 signalView->PlotSignal("anode", "i");
@@ -330,7 +349,7 @@ int main(int argc, char *argv[])
             sensor->ConvoluteSignals();
 
             signalView->SetCanvas((TPad *)cs->cd(2));
-            // signalView->PlotSignal("anode", "t");
+            signalView->PlotSignal("anode", "t");
             signalView->PlotSignal("anode", "e");
             if (driftIon)
                 signalView->PlotSignal("anode", "i");
@@ -370,26 +389,4 @@ int main(int argc, char *argv[])
 
     if (plotDrift || plotField || plotSignal)
         app.Run(kTRUE);
-}
-void DrawDetector(double tubeR, double wireR, double starX, int starN)
-{
-    TEllipse *cir = new TEllipse(0, 0, tubeR);
-    TEllipse *wire = new TEllipse(0, 0, wireR);
-    cir->SetFillStyle(0);
-    cir->SetLineWidth(3);
-    cir->Draw();
-    wire->SetFillColor(kBlack);
-    wire->Draw();
-    TLine *line[starN];
-    for (int i = 0; i < starN; i++)
-    {
-        double x1 = (tubeR - starX) * cos(2 * Pi / starN * i);
-        double y1 = (tubeR - starX) * sin(2 * Pi / starN * i);
-        double x2 = tubeR * cos(2 * Pi / starN * i);
-        double y2 = tubeR * sin(2 * Pi / starN * i);
-        line[i] = new TLine(x1, y1, x2, y2);
-        line[i]->SetLineColor(kBlack);
-        line[i]->SetLineWidth(3);
-        line[i]->Draw();
-    }
 }
