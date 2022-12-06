@@ -22,13 +22,13 @@ MP, RSVX, 1, 0              !
 MP, PERX, 2, 1	            ! gas
 
 ! geometry
-zLength = 5                 ! tube length, unit: mm
-tubeR = 25.4/8              ! tube diameter
-tubeWallR = tubeR+0.3       ! tube wall thickness
+zLength = 0.1               ! tube length, unit: mm
+tubeR = 25.4/2              ! tube diameter
+tubeWallR = tubeR+0.5       ! tube wall thickness
 wireR = 0.1/2               ! wire radius
 starX = tubeR/2             ! star length
 starXPos = tubeR-0.5*starX  ! star center coordinate
-starY = 0.1                 ! star thichness
+starY = 0.2                 ! star thichness
 starN = 6                   ! star number
 
 ! voltage
@@ -74,7 +74,7 @@ DA, ALL, VOLT, ground
 
 ! meshing options
 MSHKEY, 0             ! use free meshing (the default).
-SMRT, 9               ! from 1 (fine mesh) to 10 (coarse mesh) 
+SMRT, 4               ! from 1 (fine mesh) to 10 (coarse mesh) 
 VSEL, S, VOLU, , 2    ! #2 -> gas
 ASLV, S
 VMESH, 2
@@ -130,3 +130,5 @@ SOLVE
 /OUTPUT, ANODE, lis
 PRNSOL
 /OUTPUT
+
+FINISH
