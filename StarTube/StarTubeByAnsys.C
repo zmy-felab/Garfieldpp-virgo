@@ -30,10 +30,10 @@ void DrawDetector(double tubeR, double wireR, double starX, int starN);
 
 int main(int argc, char *argv[])
 {
-    bool plotField = true;
-    bool plotDrift = true;
-    bool plotSignal = true;
-    bool driftIon = true;
+    constexpr bool plotField = true;
+    constexpr bool plotDrift = true;
+    constexpr bool plotSignal = true;
+    constexpr bool driftIon = true;
 
     // Start time
     time_t t;
@@ -44,20 +44,14 @@ int main(int argc, char *argv[])
     sprintf(timeRecond, "Start   time: %d/%02d/%02d %02d:%02d:%02d", lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday, lt->tm_hour, lt->tm_min, lt->tm_sec);
 
     const int nEvents = atoi(argv[1]); // event num
-    if(nEvents <= 0)
-    {
-        plotDrift = false;
-        plotSignal = false;
-        driftIon = false;
-    }
 
     // information of detector [cm]
     const double zLength = 0.5;
     const double tubeR = 2.54 / 8;
-    const double tubeWallR = tubeR + 0.03;
+    // const double tubeWallR = tubeR + 0.03;
     const double wireR = 0.01 / 2;
     const double starX = tubeR / 2.;
-    const double starY = 0.1;
+    // const double starY = 0.1;
     const int starN = 6;
 
     TApplication app("app", &argc, argv);
@@ -65,7 +59,7 @@ int main(int argc, char *argv[])
     plottingEngine.SetDefaultStyle();
 
     // load the field map
-    const string ansysPath = "../ansys/";
+    const string ansysPath = "./ansys/";
     ComponentAnsys123 *tube = new ComponentAnsys123();
     tube->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
     tube->PrintRange();
@@ -190,7 +184,7 @@ int main(int argc, char *argv[])
     double xi2 = 0., yi2 = 0., zi2 = 0., ti2 = 0.;
     int statusi;
 
-    TFile *ff = new TFile("../result/x-ray.root", "RECREATE");
+    TFile *ff = new TFile("./result/x-ray.root", "RECREATE");
     TTree *tt_x = new TTree("x_ray", "number of electrons and ions");
     tt_x->Branch("x0", &x0, "x0/D");
     tt_x->Branch("y0", &y0, "y0/D");
@@ -219,7 +213,7 @@ int main(int argc, char *argv[])
     tt_ele->Branch("ee2", &ee2, "ee2/D");
     tt_ele->Branch("statuse", &statuse, "statuse/I");
 
-    TTree *tt_pri_i, *tt_ion;
+    TTree *tt_ion;
     if (driftIon)
     {
         tt_ion = new TTree("ion", "Ions information");
@@ -338,7 +332,7 @@ int main(int argc, char *argv[])
                 signalView->PlotSignal("anode", "i");
 
             char name[50];
-            sprintf(name, "../result/signal_%d.pdf", i);
+            sprintf(name, "./result/signal_%d.pdf", i);
             cs->SaveAs(name);
         }
         if (plotDrift)
@@ -351,7 +345,7 @@ int main(int argc, char *argv[])
             DrawDetector(tubeR, wireR, starX, starN);
 
             char name[50];
-            sprintf(name, "../result/driftline_%d.pdf", i);
+            sprintf(name, "./result/driftline_%d.pdf", i);
             cd->SaveAs(name);
         }
     }
