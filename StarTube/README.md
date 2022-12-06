@@ -1,0 +1,2 @@
+# 星型管模拟
+星型管的电场可以通过`Ansys`生成，也可通过`Garfieldpp`自带的`neBEM`生成，因此模拟程序分为两种：`StarTubeByAnsys.C`与`StarTubeByneBEM.C`。`StarTubeByAnsys.C`需要事先由Ansys生成电场文件(及权重场文件)，并修改程序中对应的探测器几何参数。`StarTubeByneBEM.C`则比较自由，可以在程序中直接设置探测器几何，包括`Star的数量`、`丝的半径与高压`、`管子的半径与长度`等。但两者的模拟结果貌似有所区别，需要进一步对比验证。
