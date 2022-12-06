@@ -8,22 +8,19 @@ CFLAGS = -Wall -Wextra -Wno-long-long \
 
 LDFLAGS = -lGarfield `root-config --glibs` -lGeom -lgfortran -lm
 
-TARGET = StarTube
+all: StarTubeByAnsys StarTubeByneBEM
 
-MODE = Ansys
+StarTubeByAnsys: StarTubeByAnsys.C 
+	$(CXX) $(CFLAGS) StarTubeByAnsys.C
+	$(CXX) `root-config --cflags` -o StarTubeByAnsys StarTubeByAnsys.o $(LDFLAGS)
+	rm StarTubeByAnsys.o
 
-$(TARGET)By$(MODE): $(TARGET)By$(MODE).C 
-	$(CXX) $(CFLAGS) $(TARGET)By$(MODE).C
-	$(CXX) `root-config --cflags` -o $(TARGET)By$(MODE) $(TARGET)By$(MODE).o $(LDFLAGS)
-	rm $(TARGET)By$(MODE).o
-
-MODE = neBEM
-
-$(TARGET)By$(MODE): $(TARGET)By$(MODE).C 
-	$(CXX) $(CFLAGS) $(TARGET)By$(MODE).C
-	$(CXX) `root-config --cflags` -o $(TARGET)By$(MODE) $(TARGET)By$(MODE).o $(LDFLAGS)
-	rm $(TARGET)By$(MODE).o
+StarTubeByneBEM: StarTubeByneBEM.C 
+	$(CXX) $(CFLAGS) StarTubeByneBEM.C
+	$(CXX) `root-config --cflags` -o StarTubeByneBEM StarTubeByneBEM.o $(LDFLAGS)
+	rm StarTubeByneBEM.o
 
 .PHONY: clean
 clean:
-	rm $(TARGET)*
+	rm StarTubeByneBEM
+	rm StarTubeByAnsys
