@@ -46,12 +46,12 @@ int main(int argc, char *argv[])
     const int nEvents = atoi(argv[1]); // event num
 
     // information of detector [cm]
-    const double zLength = 0.5;
-    const double tubeR = 2.54 / 8;
+    const double zLength = 0.01;
+    const double tubeR = 2.54 / 2;
     // const double tubeWallR = tubeR + 0.03;
     const double wireR = 0.01 / 2;
     const double starX = tubeR / 2.;
-    // const double starY = 0.1;
+    // const double starY = 0.2;
     const int starN = 6;
 
     TApplication app("app", &argc, argv);
@@ -62,6 +62,7 @@ int main(int argc, char *argv[])
     const string ansysPath = "./ansys/";
     ComponentAnsys123 *tube = new ComponentAnsys123();
     tube->Initialise(ansysPath + "ELIST.lis", ansysPath + "NLIST.lis", ansysPath + "MPLIST.lis", ansysPath + "PRNSOL.lis", "mm");
+    tube->EnableMirrorPeriodicityZ();
     tube->PrintRange();
 
     // setup the gas
@@ -98,7 +99,7 @@ int main(int argc, char *argv[])
     // Create the sensor.
     Sensor *sensor = new Sensor();
     sensor->AddComponent(tube);
-    sensor->SetArea(-tubeR, -tubeR, -zLength / 2, tubeR, tubeR, zLength / 2);
+    sensor->SetArea(-tubeR, -tubeR, -zLength * 100, tubeR, tubeR, zLength * 100);
 
     AvalancheMicroscopic *aval = new AvalancheMicroscopic();
     aval->SetSensor(sensor);
@@ -144,7 +145,7 @@ int main(int argc, char *argv[])
 
         cd = new TCanvas("DriftLine", "DriftLine", 500, 500);
         driftView->SetCanvas(cd);
-        driftView->SetArea(-tubeR - 0.1, -tubeR - 0.1, -zLength / 2 - 0.1, tubeR + 0.1, tubeR + 0.1, zLength / 2 + 0.1);
+        driftView->SetArea(-tubeR - 0.1, -tubeR - 0.1, -zLength * 100 - 0.1, tubeR + 0.1, tubeR + 0.1, zLength * 100);
     }
     if (plotSignal)
     {
@@ -172,7 +173,7 @@ int main(int argc, char *argv[])
         cs->Divide(2, 1);
     }
 
-    double x0 = 0, y0 = 0, z0 = zLength / 2 - 0.01, t0 = 0., e0 = 5900., dx = 0, dy = 0, dz = -1; // x ray information
+    double x0 = 0, y0 = 0, z0 = 0.5, t0 = 0., e0 = 5900., dx = 0, dy = 0, dz = -1; // x ray information
     int nex = 0, nix = 0, netotal = 0;
     double xe0 = 0., ye0 = 0., ze0 = 0., te0 = 0., ee0 = 0., dx0 = 0., dy0 = 0., dz0 = 0.; // primary electron
     int ne = 0, ni = 0, np = 0;
@@ -241,15 +242,18 @@ int main(int argc, char *argv[])
             driftView->Clear();
 
         // Randomize the initial position.
-        while (1)
-        {
-            x0 = -tubeR / 2. + RndmUniform() * tubeR;
-            y0 = -tubeR / 2. + RndmUniform() * tubeR;
+        // while (1)
+        // {
+        //     x0 = -tubeR / 2. + RndmUniform() * tubeR;
+        //     y0 = -tubeR / 2. + RndmUniform() * tubeR;
 
-            double r = sqrt(x0 * x0 + y0 * y0);
-            if (r > wireR && r < (tubeR - starX))
-                break;
-        }
+        //     double r = sqrt(x0 * x0 + y0 * y0);
+        //     if (r > wireR && r < (tubeR - starX))
+        //         break;
+        // }
+
+        x0 = tubeR * 0.5;
+        y0 = tubeR * 0.5;
 
         while (1)
         {
